@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Repair &amp; Rework Board - GANES ETPLAST</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fef9ef",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#FFFFFF",
+                        "secondary": "#5f5e5e",
+                        "on-primary-fixed-variant": "#6d3900",
+                        "surface-bright": "#fef9ef",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#93ccff",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-tertiary-container": "#003756",
+                        "tertiary-fixed": "#cce5ff",
+                        "on-secondary-container": "#636262",
+                        "danger": "#E63946",
+                        "surface-tint": "#904d00",
+                        "on-surface-variant": "#554335",
+                        "on-secondary": "#ffffff",
+                        "primary": "#904d00",
+                        "on-primary-fixed": "#2e1500",
+                        "on-error": "#ffffff",
+                        "surface-dim": "#dedad0",
+                        "on-background": "#1d1c16",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f8f3e9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "primary-fixed": "#ffdcc2",
+                        "on-primary-container": "#512900",
+                        "tertiary-container": "#00a4f6",
+                        "on-tertiary-fixed-variant": "#004b73",
+                        "surface-variant": "#e7e2d8",
+                        "warning": "#F2B705",
+                        "surface-container": "#f2ede3",
+                        "inverse-on-surface": "#f5f0e6",
+                        "info": "#2E86AB",
+                        "inverse-surface": "#32302a",
+                        "inverse-primary": "#ffb77b",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#006397",
+                        "on-tertiary-fixed": "#001d31",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e7e2d8",
+                        "primary-fixed-dim": "#ffb77b",
+                        "surface-container-high": "#ece8de",
+                        "secondary-container": "#e2dfde",
+                        "deep-orange": "#C1440E",
+                        "success": "#3FA34D",
+                        "outline": "#887363",
+                        "primary-container": "#e8820d",
+                        "on-surface": "#1d1c16",
+                        "outline-variant": "#dcc2af",
+                        "on-secondary-fixed-variant": "#474746"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "bento-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "data-md": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "data-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "data-md": ["14px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "data-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .hard-shadow {
+            box-shadow: 6px 6px 0px #1A1A1A;
+        }
+        .hard-shadow:active {
+            box-shadow: 2px 2px 0px #1A1A1A;
+            transform: translate(4px, 4px);
+        }
+        .hard-shadow-nav {
+            box-shadow: 6px 0px 0px #1A1A1A;
+        }
+        .bento-card {
+            border: 2px solid #1d1c16;
+            background-color: #FFFFFF;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md flex min-h-screen">
+<!-- Side Navigation (Web) -->
+<nav class="fixed left-0 top-0 h-full flex flex-col pt-20 z-40 bg-surface dark:bg-inverse-surface h-screen w-64 border-r-2 border-on-background dark:border-outline-variant shadow-[6px_0px_0px_#1A1A1A] dark:shadow-[6px_0px_0px_#000000] hidden md:flex">
+<div class="px-gutter pb-6">
+<h1 class="font-headline-md text-headline-md text-primary font-black tracking-tighter text-deep-orange dark:text-primary-fixed-dim">Industrial ERP</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-2 uppercase">Admin Console</p>
+</div>
+<div class="flex-grow flex flex-col overflow-y-auto">
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">precision_manufacturing</span>
+<span class="font-label-sm text-label-sm">Moulds</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+<span class="font-label-sm text-label-sm">Materials</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">factory</span>
+<span class="font-label-sm text-label-sm">Vendors</span>
+</a>
+<a class="bg-primary-container text-on-primary-container border-2 border-on-background dark:border-on-surface shadow-[4px_4px_0px_#1A1A1A] m-2 p-3 flex items-center gap-3 font-bold rounded-DEFAULT scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">build</span>
+<span class="font-label-sm text-label-sm uppercase">Repairs</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">analytics</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">smart_toy</span>
+<span class="font-label-sm text-label-sm">Copilot</span>
+</a>
+</div>
+<div class="p-gutter border-t-2 border-on-background">
+<button class="w-full bg-deep-orange text-white border-2 border-on-background hard-shadow font-label-sm text-label-sm uppercase py-3 rounded-DEFAULT hover:bg-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Production Log
+            </button>
+</div>
+</nav>
+<!-- Top Navigation (Mobile) -->
+<header class="md:hidden sticky top-0 z-50 flex justify-between items-center px-margin py-4 w-full bg-surface dark:bg-inverse-surface full-width top-0 border-b-2 border-on-background dark:border-outline-variant shadow-[6px_6px_0px_#1A1A1A] dark:shadow-[6px_6px_0px_#000000]">
+<h1 class="text-headline-md font-headline-md font-black tracking-tighter text-deep-orange dark:text-primary-fixed-dim">GANES ETPLAST</h1>
+<div class="flex gap-4">
+<button class="text-on-surface-variant hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow md:ml-64 p-margin flex flex-col gap-gutter min-w-0">
+<!-- Header Section -->
+<header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-gutter">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-background">Repair &amp; Rework Board</h2>
+<p class="font-body-md text-body-md text-secondary mt-2">Manage mould maintenance lifecycle and vendor repairs.</p>
+</div>
+<button class="bg-deep-orange text-white border-2 border-on-background hard-shadow font-headline-md text-headline-md uppercase py-4 px-6 rounded-DEFAULT hover:bg-primary transition-colors flex items-center gap-3">
+<span class="material-symbols-outlined font-bold text-[28px]">build_circle</span>
+                Move to Repair
+            </button>
+</header>
+<!-- Kanban Board -->
+<div class="flex-grow flex gap-bento-gap overflow-x-auto pb-4 snap-x snap-mandatory hide-scrollbar">
+<!-- Column 1: Sent for Repair -->
+<section class="min-w-[320px] w-full max-w-[400px] flex flex-col gap-4 snap-center shrink-0">
+<header class="bento-card p-4 rounded-DEFAULT flex items-center justify-between bg-surface-container-low border-b-4 border-b-warning">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+<h3 class="font-headline-md text-headline-md uppercase">Sent for Repair</h3>
+</div>
+<span class="bg-surface border-2 border-on-background font-data-md text-data-md px-2 py-1 rounded-full">2</span>
+</header>
+<div class="flex flex-col gap-4 h-full overflow-y-auto">
+<!-- Card 1 -->
+<article class="bento-card hard-shadow p-gutter rounded-DEFAULT cursor-grab active:cursor-grabbing hover:-translate-y-1 transition-transform">
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-widest">Mould ID</span>
+<p class="font-data-lg text-data-lg text-on-background">MLD-8902-A</p>
+</div>
+<span class="material-symbols-outlined text-secondary">drag_indicator</span>
+</div>
+<div class="space-y-3 border-t-2 border-on-background pt-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">location_on</span>
+<span class="font-body-md text-body-md">Vendor: TechCast India</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[18px]">schedule</span>
+<span class="font-body-md text-body-md font-bold text-warning">2 Days in Transit</span>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="bento-card hard-shadow p-gutter rounded-DEFAULT cursor-grab active:cursor-grabbing hover:-translate-y-1 transition-transform">
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-widest">Mould ID</span>
+<p class="font-data-lg text-data-lg text-on-background">MLD-1145-C</p>
+</div>
+<span class="material-symbols-outlined text-secondary">drag_indicator</span>
+</div>
+<div class="space-y-3 border-t-2 border-on-background pt-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">location_on</span>
+<span class="font-body-md text-body-md">Vendor: Global PolyMakers</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[18px]">schedule</span>
+<span class="font-body-md text-body-md font-bold text-warning">1 Day in Transit</span>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- Column 2: Under Repair -->
+<section class="min-w-[320px] w-full max-w-[400px] flex flex-col gap-4 snap-center shrink-0">
+<header class="bento-card p-4 rounded-DEFAULT flex items-center justify-between bg-surface-container-low border-b-4 border-b-info">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-info" style="font-variation-settings: 'FILL' 1;">build</span>
+<h3 class="font-headline-md text-headline-md uppercase">Under Repair</h3>
+</div>
+<span class="bg-surface border-2 border-on-background font-data-md text-data-md px-2 py-1 rounded-full">1</span>
+</header>
+<div class="flex flex-col gap-4 h-full overflow-y-auto">
+<!-- Card 3 -->
+<article class="bento-card hard-shadow p-gutter rounded-DEFAULT border-info cursor-grab active:cursor-grabbing hover:-translate-y-1 transition-transform">
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-widest">Mould ID</span>
+<p class="font-data-lg text-data-lg text-on-background">MLD-7731-B</p>
+</div>
+<span class="bg-info text-white border-2 border-on-background px-2 py-1 font-label-sm text-label-sm uppercase rounded-sm">Critical</span>
+</div>
+<div class="space-y-3 border-t-2 border-on-background pt-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">location_on</span>
+<span class="font-body-md text-body-md">Vendor: Precision Dies</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-danger text-[18px]">schedule</span>
+<span class="font-body-md text-body-md font-bold text-danger">14 Days in Repair</span>
+</div>
+<div class="mt-4 pt-2 border-t border-dashed border-on-background">
+<span class="font-label-sm text-label-sm text-secondary uppercase block mb-1">Issue:</span>
+<p class="font-data-md text-data-md text-on-background line-clamp-2">Ejector pin failure, requires complete block re-machining.</p>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- Column 3: Repaired / Ready -->
+<section class="min-w-[320px] w-full max-w-[400px] flex flex-col gap-4 snap-center shrink-0">
+<header class="bento-card p-4 rounded-DEFAULT flex items-center justify-between bg-surface-container-low border-b-4 border-b-success">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<h3 class="font-headline-md text-headline-md uppercase">Repaired</h3>
+</div>
+<span class="bg-surface border-2 border-on-background font-data-md text-data-md px-2 py-1 rounded-full">3</span>
+</header>
+<div class="flex flex-col gap-4 h-full overflow-y-auto">
+<!-- Card 4 -->
+<article class="bento-card hard-shadow p-gutter rounded-DEFAULT border-success cursor-grab active:cursor-grabbing hover:-translate-y-1 transition-transform">
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-widest">Mould ID</span>
+<p class="font-data-lg text-data-lg text-on-background">MLD-2299-D</p>
+</div>
+<span class="material-symbols-outlined text-success" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div class="space-y-3 border-t-2 border-on-background pt-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">location_on</span>
+<span class="font-body-md text-body-md">Vendor: Alpha Machining</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-[18px]">task_alt</span>
+<span class="font-body-md text-body-md font-bold text-success">Ready for Pickup</span>
+</div>
+<button class="w-full mt-4 bg-surface text-on-background border-2 border-on-background hard-shadow font-label-sm text-label-sm uppercase py-2 rounded-DEFAULT hover:bg-surface-variant transition-colors">
+                                Dispatch Truck
+                            </button>
+</div>
+</article>
+</div>
+</section>
+<!-- Column 4: Scrapped -->
+<section class="min-w-[320px] w-full max-w-[400px] flex flex-col gap-4 snap-center shrink-0">
+<header class="bento-card p-4 rounded-DEFAULT flex items-center justify-between bg-surface-container-lowest border-b-4 border-b-secondary opacity-80">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">delete_forever</span>
+<h3 class="font-headline-md text-headline-md uppercase text-secondary">Scrapped</h3>
+</div>
+<span class="bg-surface border-2 border-on-background font-data-md text-data-md px-2 py-1 rounded-full text-secondary">1</span>
+</header>
+<div class="flex flex-col gap-4 h-full overflow-y-auto">
+<!-- Card 5 -->
+<article class="bento-card p-gutter rounded-DEFAULT opacity-60 grayscale cursor-not-allowed border-dashed">
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-widest">Mould ID</span>
+<p class="font-data-lg text-data-lg text-secondary line-through">MLD-0012-Z</p>
+</div>
+</div>
+<div class="space-y-3 border-t-2 border-secondary pt-4">
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm text-secondary uppercase">Status:</span>
+<span class="font-body-md text-body-md font-bold text-secondary">Beyond Repair</span>
+</div>
+</div>
+</article>
+</div>
+</section>
+</div>
+</main>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</body></html>

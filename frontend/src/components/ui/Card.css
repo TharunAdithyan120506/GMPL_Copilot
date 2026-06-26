@@ -1,0 +1,31 @@
+.neo-card {
+  background-color: var(--color-bg-secondary);
+  border: var(--border-width-md) solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.neo-card-header {
+  padding: 1rem 1.5rem;
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+  background-color: var(--color-bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.neo-card-title {
+  font-size: 1.25rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.neo-card-content {
+  padding: 1.5rem;
+  flex: 1;
+}

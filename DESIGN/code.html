@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dashboard - Industrial ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fef9ef",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#FFFFFF",
+                        "secondary": "#5f5e5e",
+                        "on-primary-fixed-variant": "#6d3900",
+                        "surface-bright": "#fef9ef",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#93ccff",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-tertiary-container": "#003756",
+                        "tertiary-fixed": "#cce5ff",
+                        "on-secondary-container": "#636262",
+                        "danger": "#E63946",
+                        "surface-tint": "#904d00",
+                        "on-surface-variant": "#554335",
+                        "on-secondary": "#ffffff",
+                        "primary": "#904d00",
+                        "on-primary-fixed": "#2e1500",
+                        "on-error": "#ffffff",
+                        "surface-dim": "#dedad0",
+                        "on-background": "#1d1c16",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f8f3e9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "primary-fixed": "#ffdcc2",
+                        "on-primary-container": "#512900",
+                        "tertiary-container": "#00a4f6",
+                        "on-tertiary-fixed-variant": "#004b73",
+                        "surface-variant": "#e7e2d8",
+                        "warning": "#F2B705",
+                        "surface-container": "#f2ede3",
+                        "inverse-on-surface": "#f5f0e6",
+                        "info": "#2E86AB",
+                        "inverse-surface": "#32302a",
+                        "inverse-primary": "#ffb77b",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#006397",
+                        "on-tertiary-fixed": "#001d31",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e7e2d8",
+                        "primary-fixed-dim": "#ffb77b",
+                        "surface-container-high": "#ece8de",
+                        "secondary-container": "#e2dfde",
+                        "deep-orange": "#C1440E",
+                        "success": "#3FA34D",
+                        "outline": "#887363",
+                        "primary-container": "#e8820d",
+                        "on-surface": "#1d1c16",
+                        "outline-variant": "#dcc2af",
+                        "on-secondary-fixed-variant": "#474746"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "bento-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "data-md": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "data-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "data-md": ["14px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "data-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #fef9ef; /* bg-background */
+            color: #1d1c16; /* text-on-background */
+        }
+        /* Custom scrollbar for raw industrial feel */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f8f3e9; /* surface-container-low */
+            border-left: 2px solid #1d1c16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #904d00; /* primary */
+            border: 2px solid #1d1c16;
+            border-radius: 0;
+        }
+        
+        /* Neobrutalist Base Classes */
+        .neo-card {
+            background-color: #FFFFFF;
+            border: 2px solid #1d1c16;
+            box-shadow: 6px 6px 0px #1A1A1A;
+            padding: 24px;
+            transition: all 0.2s ease;
+        }
+        
+        .neo-card-interactive:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 4px 4px 0px #1A1A1A;
+        }
+        
+        .neo-card-interactive:active {
+            transform: translate(4px, 4px);
+            box-shadow: 2px 2px 0px #1A1A1A;
+        }
+
+        .neo-btn-primary {
+            background-color: #e8820d; /* primary-container */
+            color: #ffffff;
+            border: 2px solid #1d1c16;
+            box-shadow: 6px 6px 0px #1A1A1A;
+            text-transform: uppercase;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            padding: 12px 24px;
+            transition: all 0.1s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .neo-btn-primary:active {
+            transform: translate(4px, 4px);
+            box-shadow: 2px 2px 0px #1A1A1A;
+        }
+
+        .neo-chip-warning {
+            background-color: #F2B705;
+            border: 2px solid #1d1c16;
+            color: #1d1c16;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .neo-chip-danger {
+            background-color: #E63946;
+            border: 2px solid #1d1c16;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .neo-chip-info {
+            background-color: #2E86AB;
+            border: 2px solid #1d1c16;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Donut Chart CSS hack for raw look */
+        .neo-donut {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 2px solid #1d1c16;
+            background: conic-gradient(
+                #E63946 0% 45%, /* Machine 45% */
+                #F2B705 45% 75%, /* Mould 30% */
+                #2E86AB 75% 90%, /* Manpower 15% */
+                #c8c6c5 90% 100% /* Other 10% */
+            );
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0px 0px 0px 2px #1d1c16;
+        }
+        .neo-donut::after {
+            content: '';
+            width: 80px;
+            height: 80px;
+            background: #FFFFFF;
+            border-radius: 50%;
+            border: 2px solid #1d1c16;
+            box-shadow: inset 4px 4px 0px rgba(0,0,0,0.1);
+        }
+
+    </style>
+</head>
+<body class="font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col md:flex-row">
+<!-- TopAppBar (Mobile) / Top Row Data (Not actual nav structure, just matching JSON spec for sticky header) -->
+<header class="sticky top-0 z-50 flex justify-between items-center px-margin py-4 w-full bg-surface border-b-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] md:hidden">
+<div class="flex items-center gap-3">
+<img alt="GMPL Logo" class="h-8 w-8 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-5H4T5-mbUEyLKE5ecWjl7tzHoeA0zydTTKrVcADfIqDlHfNcBvJrZWiw1ZWkUjvzGqw5sPKm9Up14Sa68b5NehYxuADDt8Z5wUfxRdpuSG-cEs6vJ6f2U90AIcbrs6k_pv-tECi_eOUsT6-kO7l6OqyIg09tzSq34ECwSYHw1FVENmLxLp_584pY3PW8lcu13BrttzNW5Itcs-7kQm3HMYAcvBJh3fuoaTchj9XEuxa6rhyRlTAS7Dnkf0MDLRV0EJCpxRSG9-6S"/>
+<span class="text-headline-md font-headline-md font-black tracking-tighter text-deep-orange">GANES ETPLAST</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:translate-x-[2px] hover:translate-y-[2px] transition-all" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:translate-x-[2px] hover:translate-y-[2px] transition-all" data-icon="account_circle">account_circle</span>
+</div>
+</header>
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex fixed left-0 top-0 h-full flex-col pt-8 z-40 bg-surface border-r-2 border-on-background shadow-[6px_0px_0px_#1A1A1A] w-64 overflow-y-auto">
+<div class="px-6 mb-8 flex flex-col gap-2">
+<div class="flex items-center gap-3 mb-4">
+<img alt="GMPL Logo" class="h-12 w-12 object-contain border-2 border-on-background p-1 bg-surface-container-low shadow-[2px_2px_0px_#1A1A1A]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-5H4T5-mbUEyLKE5ecWjl7tzHoeA0zydTTKrVcADfIqDlHfNcBvJrZWiw1ZWkUjvzGqw5sPKm9Up14Sa68b5NehYxuADDt8Z5wUfxRdpuSG-cEs6vJ6f2U90AIcbrs6k_pv-tECi_eOUsT6-kO7l6OqyIg09tzSq34ECwSYHw1FVENmLxLp_584pY3PW8lcu13BrttzNW5Itcs-7kQm3HMYAcvBJh3fuoaTchj9XEuxa6rhyRlTAS7Dnkf0MDLRV0EJCpxRSG9-6S"/>
+</div>
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight">Industrial ERP</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase">Admin Console</p>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full neo-btn-primary">
+<span class="material-symbols-outlined" data-icon="add" style="font-variation-settings: 'FILL' 1;">add</span>
+                New Production Log
+            </button>
+</div>
+<div class="flex-1 flex flex-col gap-1 px-2">
+<!-- Active Tab: Dashboard -->
+<a class="bg-primary-container text-on-primary-container border-2 border-on-background shadow-[4px_4px_0px_#1A1A1A] m-2 p-3 flex items-center gap-3 font-bold" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="precision_manufacturing">precision_manufacturing</span>
+<span class="font-label-sm text-label-sm">Moulds</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-sm text-label-sm">Materials</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+<span class="font-label-sm text-label-sm">Vendors</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+<span class="font-label-sm text-label-sm">Repairs</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-sm text-label-sm">Copilot</span>
+</a>
+</div>
+<div class="mt-auto border-t-2 border-on-background p-4 flex flex-col gap-1 bg-surface-container-low">
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-2 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-container-highest p-2 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-margin flex flex-col gap-margin relative">
+<!-- Header Area (Desktop only, mobile handled by TopAppBar) -->
+<header class="hidden md:flex justify-between items-end mb-4 border-b-4 border-on-background pb-4">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-background mb-2">Company Overview</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">GMPL Copilot / Real-time Enterprise Metrics</p>
+</div>
+<div class="flex gap-4">
+<button class="neo-card neo-card-interactive p-3 flex items-center justify-center bg-surface-container-low">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+<button class="neo-card neo-card-interactive p-3 flex items-center justify-center bg-surface-container-low relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-3 h-3 bg-danger border-2 border-on-background rounded-full"></span>
+</button>
+</div>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-bento-gap">
+<!-- KPI Tiles (Row 1) -->
+<div class="md:col-span-3 neo-card flex flex-col justify-between bg-surface-bright">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Active Moulds</span>
+<span class="material-symbols-outlined text-primary" data-icon="precision_manufacturing">precision_manufacturing</span>
+</div>
+<div class="font-data-lg text-[48px] leading-none text-on-background font-bold">142</div>
+<div class="mt-4 flex items-center gap-2 text-success font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
+<span>+4 this week</span>
+</div>
+</div>
+<div class="md:col-span-3 neo-card flex flex-col justify-between bg-error-container">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-sm text-label-sm uppercase text-on-error-container">Low RM Stock Alerts</span>
+<span class="material-symbols-outlined text-danger" data-icon="warning">warning</span>
+</div>
+<div class="font-data-lg text-[48px] leading-none text-danger font-bold">3</div>
+<div class="mt-4">
+<span class="neo-chip-danger">Requires Action</span>
+</div>
+</div>
+<div class="md:col-span-3 neo-card flex flex-col justify-between bg-tertiary-fixed">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-sm text-label-sm uppercase text-on-tertiary-container">Pending Edit Requests</span>
+<span class="material-symbols-outlined text-tertiary" data-icon="edit_document">edit_document</span>
+</div>
+<div class="font-data-lg text-[48px] leading-none text-on-tertiary-container font-bold">12</div>
+<div class="mt-4">
+<span class="neo-chip-info">From 4 Vendors</span>
+</div>
+</div>
+<div class="md:col-span-3 neo-card flex flex-col justify-between bg-surface-container-low">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Moulds Near Life Limit</span>
+<span class="material-symbols-outlined text-warning" data-icon="timer">timer</span>
+</div>
+<div class="font-data-lg text-[48px] leading-none text-on-background font-bold">5</div>
+<div class="mt-4 flex flex-col gap-2">
+<div class="w-full h-4 border-2 border-on-background bg-surface">
+<div class="h-full bg-warning border-r-2 border-on-background" style="width: 92%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">&gt; 90% Shot Life</span>
+</div>
+</div>
+<!-- Large Line Chart Area (Row 2, spanning 8 cols) -->
+<div class="md:col-span-8 neo-card min-h-[400px] flex flex-col">
+<div class="flex justify-between items-center mb-6 border-b-2 border-on-background pb-4">
+<div>
+<h3 class="font-headline-md text-headline-md">Production Across All Vendors</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mt-1">Last 30 Days (Units in 1000s)</p>
+</div>
+<button class="neo-card p-2 py-1 text-label-sm font-label-sm flex items-center gap-2 neo-card-interactive">
+                        Export <span class="material-symbols-outlined text-[16px]" data-icon="download">download</span>
+</button>
+</div>
+<!-- SVG Chart Mockup for Industrial Vibe -->
+<div class="flex-1 w-full relative bg-[#f8f3e9] border-2 border-on-background p-4 flex items-end">
+<!-- Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none opacity-20">
+<div class="border-b-2 border-on-background w-full h-0"></div>
+<div class="border-b-2 border-on-background w-full h-0"></div>
+<div class="border-b-2 border-on-background w-full h-0"></div>
+<div class="border-b-2 border-on-background w-full h-0"></div>
+</div>
+<!-- Brutalist Bar/Line Hybrid representation -->
+<div class="w-full h-[80%] flex items-end justify-between gap-1 relative z-10 px-4">
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[30%] relative group">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-background text-surface font-data-md text-data-md px-2 hidden group-hover:block whitespace-nowrap z-20">30k</div>
+</div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[45%] relative group"></div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[40%] relative group"></div>
+<div class="w-8 bg-primary-container border-2 border-on-background h-[60%] relative group shadow-[4px_0px_0px_#1A1A1A]"></div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[55%] relative group"></div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[70%] relative group"></div>
+<div class="w-8 bg-primary-container border-2 border-on-background h-[85%] relative group shadow-[4px_0px_0px_#1A1A1A]"></div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[65%] relative group"></div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[50%] relative group"></div>
+<div class="w-8 bg-danger border-2 border-on-background h-[20%] relative group">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-surface border-2 border-on-background rounded-full z-20 flex items-center justify-center">
+<div class="w-1 h-1 bg-danger rounded-full"></div>
+</div>
+</div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[40%] relative group"></div>
+<div class="w-8 bg-surface-dim border-2 border-on-background h-[75%] relative group"></div>
+<div class="w-8 bg-primary-container border-2 border-on-background h-[90%] relative group shadow-[4px_0px_0px_#1A1A1A]">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-background text-surface font-data-md text-data-md px-2 hidden group-hover:block whitespace-nowrap z-20">90k</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Downtime Mini-Chart & Vendor Snapshot (Row 2, spanning 4 cols) -->
+<div class="md:col-span-4 flex flex-col gap-bento-gap">
+<!-- Downtime Donut -->
+<div class="neo-card flex-1 flex flex-col">
+<h3 class="font-headline-md text-[20px] mb-4 border-b-2 border-on-background pb-2">Downtime Breakdown</h3>
+<div class="flex-1 flex flex-col items-center justify-center gap-6">
+<div class="neo-donut">
+<div class="absolute inset-0 flex items-center justify-center flex-col z-10 pointer-events-none">
+<span class="font-data-lg text-data-lg font-bold">124h</span>
+<span class="font-label-sm text-[10px] uppercase">Total</span>
+</div>
+</div>
+<div class="w-full grid grid-cols-2 gap-2 font-data-md text-[12px]">
+<div class="flex items-center gap-2 border-2 border-on-background p-1 bg-surface-container-low">
+<div class="w-3 h-3 bg-danger border border-on-background"></div>
+<span>Machine (45%)</span>
+</div>
+<div class="flex items-center gap-2 border-2 border-on-background p-1 bg-surface-container-low">
+<div class="w-3 h-3 bg-warning border border-on-background"></div>
+<span>Mould (30%)</span>
+</div>
+<div class="flex items-center gap-2 border-2 border-on-background p-1 bg-surface-container-low">
+<div class="w-3 h-3 bg-info border border-on-background"></div>
+<span>Manpower (15%)</span>
+</div>
+<div class="flex items-center gap-2 border-2 border-on-background p-1 bg-surface-container-low">
+<div class="w-3 h-3 bg-secondary-fixed-dim border border-on-background"></div>
+<span>Other (10%)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Vendor Snapshot Strip -->
+<div class="neo-card flex flex-col p-0 overflow-hidden">
+<div class="p-4 border-b-2 border-on-background bg-surface-container-low">
+<h3 class="font-headline-md text-[18px]">Vendor Performance</h3>
+</div>
+<!-- Top Vendor -->
+<div class="p-4 border-b-2 border-on-background flex justify-between items-center bg-surface hover:bg-surface-bright transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-success border-2 border-on-background flex items-center justify-center text-surface font-bold">A</div>
+<div>
+<div class="font-data-md text-data-md font-bold">Vendor Alpha</div>
+<div class="font-label-sm text-[10px] uppercase text-on-surface-variant">Top Performer</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-lg text-[24px] font-bold text-success">94</div>
+<div class="font-label-sm text-[10px] uppercase">Score</div>
+</div>
+</div>
+<!-- Bottom Vendor -->
+<div class="p-4 flex justify-between items-center bg-surface hover:bg-error-container transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-danger border-2 border-on-background flex items-center justify-center text-surface font-bold">D</div>
+<div>
+<div class="font-data-md text-data-md font-bold">Vendor Delta</div>
+<div class="font-label-sm text-[10px] uppercase text-danger">Needs Attention</div>
+</div>
+</div>
+<div class="text-right">
+<div class="font-data-lg text-[24px] font-bold text-danger">68</div>
+<div class="font-label-sm text-[10px] uppercase">Score</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

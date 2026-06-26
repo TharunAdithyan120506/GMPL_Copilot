@@ -1,0 +1,431 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Company {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  users                      User[]
+  roles                      Role[]
+  moulds                     Mould[]
+  rawMaterials               RawMaterial[]
+  vendors                    Vendor[]
+  customerRequirements       CustomerRequirement[]
+  assignments                Assignment[]
+  dailyProductionLogs        DailyProductionLog[]
+  editRequests               EditRequest[]
+  repairRecords              RepairRecord[]
+  mouldLifecycleEvents       MouldLifecycleEvent[]
+  auditLogs                  AuditLog[]
+  notifications              Notification[]
+  aiConversations            AiConversation[]
+  vendorPerformanceSnapshots VendorPerformanceSnapshot[]
+  jobs                       Job[]
+
+  @@map("companies")
+}
+
+model Role {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  key       String
+  name      String
+  company   Company  @relation(fields: [companyId], references: [id])
+  users     User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key   String   @unique
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  roleId          String   @map("role_id") @db.Uuid
+  vendorId        String?  @map("vendor_id") @db.Uuid
+  loginIdentifier String   @unique @map("login_identifier")
+  passwordHash    String   @map("password_hash")
+  isActive        Boolean  @default(true) @map("is_active")
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company      @relation(fields: [companyId], references: [id])
+  role         Role         @relation(fields: [roleId], references: [id])
+  vendor       Vendor?      @relation(fields: [vendorId], references: [id])
+  
+  sessions           Session[]
+  editRequests       EditRequest[]
+  repairRecords      RepairRecord[]
+  lifecycleEvents    MouldLifecycleEvent[]
+  auditLogs          AuditLog[]
+  aiConversations    AiConversation[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  token        String   @unique
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model Mould {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId            String   @map("company_id") @db.Uuid
+  code                 String
+  name                 String
+  cavityCount          Int      @map("cavity_count")
+  partWeightG          Decimal  @map("part_weight_g") @db.Decimal
+  runnerWeightG        Decimal  @map("runner_weight_g") @db.Decimal
+  shotWeightG          Decimal  @map("shot_weight_g") @db.Decimal
+  shotLifeLimit        BigInt   @map("shot_life_limit")
+  shotCountAccumulated BigInt   @default(0) @map("shot_count_accumulated")
+  lifecycleState       String   @map("lifecycle_state")
+  version              Int      @default(1)
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy            String?  @map("created_by") @db.Uuid
+  updatedBy            String?  @map("updated_by") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company               @relation(fields: [companyId], references: [id])
+  assignments  Assignment[]
+  lifecycleEvents MouldLifecycleEvent[]
+  repairRecords   RepairRecord[]
+  customerRequirements CustomerRequirement[]
+  dailyProductionLogs DailyProductionLog[]
+
+  @@unique([companyId, code])
+  @@map("moulds")
+}
+
+model RawMaterial {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  code       String
+  name       String
+  unit       String
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company      @relation(fields: [companyId], references: [id])
+  assignments  Assignment[]
+
+  @@unique([companyId, code])
+  @@map("raw_materials")
+}
+
+model Vendor {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  code       String
+  name       String
+  isInternal Boolean  @default(false) @map("is_internal")
+  isActive   Boolean  @default(true) @map("is_active")
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company              Company               @relation(fields: [companyId], references: [id])
+  users                User[]
+  assignments          Assignment[]
+  dailyProductionLogs  DailyProductionLog[]
+  editRequests         EditRequest[]
+  performanceSnapshots VendorPerformanceSnapshot[]
+
+  @@unique([companyId, code])
+  @@map("vendors")
+}
+
+model CustomerRequirement {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  customerName String   @map("customer_name")
+  mouldId      String   @map("mould_id") @db.Uuid
+  requiredQty  Decimal  @map("required_qty") @db.Decimal
+  dueDate      DateTime? @map("due_date") @db.Date
+  status       String
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company      @relation(fields: [companyId], references: [id])
+  mould        Mould        @relation(fields: [mouldId], references: [id])
+  assignments  Assignment[]
+
+  @@map("customer_requirements")
+}
+
+model Assignment {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId             String   @map("company_id") @db.Uuid
+  vendorId              String   @map("vendor_id") @db.Uuid
+  mouldId               String   @map("mould_id") @db.Uuid
+  customerRequirementId String?  @map("customer_requirement_id") @db.Uuid
+  rawMaterialId         String   @map("raw_material_id") @db.Uuid
+  rmAssignedQty         Decimal  @map("rm_assigned_qty") @db.Decimal
+  rmConsumedQty         Decimal  @default(0) @map("rm_consumed_qty") @db.Decimal
+  rmIrrecoverableLossQty Decimal @default(0) @map("rm_irrecoverable_loss_qty") @db.Decimal
+  rmRemainingQty        Decimal  @default(0) @map("rm_remaining_qty") @db.Decimal
+  status                String
+  assignedAt            DateTime @map("assigned_at") @db.Timestamptz
+  revokedAt             DateTime? @map("revoked_at") @db.Timestamptz
+  version               Int      @default(1)
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company             Company              @relation(fields: [companyId], references: [id])
+  vendor              Vendor               @relation(fields: [vendorId], references: [id])
+  mould               Mould                @relation(fields: [mouldId], references: [id])
+  customerRequirement CustomerRequirement? @relation(fields: [customerRequirementId], references: [id])
+  rawMaterial         RawMaterial          @relation(fields: [rawMaterialId], references: [id])
+  dailyProductionLogs DailyProductionLog[]
+
+  @@index([vendorId, status])
+  @@map("assignments")
+}
+
+model DailyProductionLog {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId              String   @map("company_id") @db.Uuid
+  assignmentId           String   @map("assignment_id") @db.Uuid
+  vendorId               String   @map("vendor_id") @db.Uuid
+  mouldId                String   @map("mould_id") @db.Uuid
+  logDate                DateTime @map("log_date") @db.Date
+  shotsRun               BigInt   @map("shots_run")
+  acceptedQty            Decimal  @map("accepted_qty") @db.Decimal
+  rejectedQty            Decimal  @map("rejected_qty") @db.Decimal
+  dispatchedQty          Decimal  @map("dispatched_qty") @db.Decimal
+  downtimeReason         String?  @map("downtime_reason")
+  downtimeMinutes        Int?     @map("downtime_minutes")
+  shotWeightGSnapshot    Decimal  @map("shot_weight_g_snapshot") @db.Decimal
+  rmConsumedQty          Decimal  @map("rm_consumed_qty") @db.Decimal
+  rmIrrecoverableLossQty Decimal  @default(0) @map("rm_irrecoverable_loss_qty") @db.Decimal
+  status                 String
+  version                Int      @default(1)
+  deletedAt              DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  assignment   Assignment    @relation(fields: [assignmentId], references: [id])
+  vendor       Vendor        @relation(fields: [vendorId], references: [id])
+  mould        Mould         @relation(fields: [mouldId], references: [id])
+  editRequests EditRequest[]
+
+  @@index([vendorId, logDate])
+  @@index([assignmentId, logDate])
+  @@index([mouldId, logDate])
+  @@map("daily_production_logs")
+}
+
+model EditRequest {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId             String   @map("company_id") @db.Uuid
+  dailyProductionLogId  String   @map("daily_production_log_id") @db.Uuid
+  vendorId              String   @map("vendor_id") @db.Uuid
+  requestedChanges      Json     @map("requested_changes")
+  reason                String
+  status                String
+  decidedBy             String?  @map("decided_by") @db.Uuid
+  decidedAt             DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote          String?  @map("decision_note")
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company            Company            @relation(fields: [companyId], references: [id])
+  dailyProductionLog DailyProductionLog @relation(fields: [dailyProductionLogId], references: [id])
+  vendor             Vendor             @relation(fields: [vendorId], references: [id])
+  decider            User?              @relation(fields: [decidedBy], references: [id])
+
+  @@map("edit_requests")
+}
+
+model RepairRecord {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String   @map("company_id") @db.Uuid
+  mouldId           String   @map("mould_id") @db.Uuid
+  reportedBy        String   @map("reported_by") @db.Uuid
+  status            String
+  issueDescription  String   @map("issue_description")
+  reworkDescription String?  @map("rework_description")
+  openedAt          DateTime @map("opened_at") @db.Timestamptz
+  closedAt          DateTime? @map("closed_at") @db.Timestamptz
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company @relation(fields: [companyId], references: [id])
+  mould    Mould   @relation(fields: [mouldId], references: [id])
+  reporter User    @relation(fields: [reportedBy], references: [id])
+
+  @@map("repair_records")
+}
+
+model MouldLifecycleEvent {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String   @map("company_id") @db.Uuid
+  mouldId           String   @map("mould_id") @db.Uuid
+  eventType         String   @map("event_type")
+  fromState         String?  @map("from_state")
+  toState           String   @map("to_state")
+  shotCountAtEvent  BigInt   @map("shot_count_at_event")
+  triggeredBy       String?  @map("triggered_by") @db.Uuid
+  triggerKind       String   @map("trigger_kind")
+  note              String?
+  createdBy  String?  @map("created_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company   Company @relation(fields: [companyId], references: [id])
+  mould     Mould   @relation(fields: [mouldId], references: [id])
+  triggerer User?   @relation(fields: [triggeredBy], references: [id])
+
+  @@map("mould_lifecycle_events")
+}
+
+model AuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id") @db.Uuid
+  action      String
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  actorRole   String   @map("actor_role")
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+  actor   User?   @relation(fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
+  @@map("audit_log")
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  type      String
+  payload   Json
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("notifications")
+}
+
+model Job {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  payload   Json
+  status    String   @default("pending")
+  attempts  Int      @default(0)
+  error     String?
+  lockedAt  DateTime? @map("locked_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("jobs")
+}
+
+model AiConversation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  startedAt DateTime @default(now()) @map("started_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company     @relation(fields: [companyId], references: [id])
+  user     User        @relation(fields: [userId], references: [id])
+  messages AiMessage[]
+
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  role            String   // 'user' | 'assistant'
+  content         String
+  generatedSql    String?  @map("generated_sql")
+  latencyMs       Int?     @map("latency_ms")
+  status          String
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id])
+
+  @@map("ai_messages")
+}
+
+model VendorPerformanceSnapshot {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  vendorId  String   @map("vendor_id") @db.Uuid
+  period    String
+  metrics   Json
+  score     Decimal  @db.Decimal
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+  vendor  Vendor  @relation(fields: [vendorId], references: [id])
+
+  @@map("vendor_performance_snapshots")
+}

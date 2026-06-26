@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vendor Dashboard - GMPL Copilot</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fef9ef",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#FFFFFF",
+                        "secondary": "#5f5e5e",
+                        "on-primary-fixed-variant": "#6d3900",
+                        "surface-bright": "#fef9ef",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#93ccff",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-tertiary-container": "#003756",
+                        "tertiary-fixed": "#cce5ff",
+                        "on-secondary-container": "#636262",
+                        "danger": "#E63946",
+                        "surface-tint": "#904d00",
+                        "on-surface-variant": "#554335",
+                        "on-secondary": "#ffffff",
+                        "primary": "#904d00",
+                        "on-primary-fixed": "#2e1500",
+                        "on-error": "#ffffff",
+                        "surface-dim": "#dedad0",
+                        "on-background": "#1d1c16",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f8f3e9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "primary-fixed": "#ffdcc2",
+                        "on-primary-container": "#512900",
+                        "tertiary-container": "#00a4f6",
+                        "on-tertiary-fixed-variant": "#004b73",
+                        "surface-variant": "#e7e2d8",
+                        "warning": "#F2B705",
+                        "surface-container": "#f2ede3",
+                        "inverse-on-surface": "#f5f0e6",
+                        "info": "#2E86AB",
+                        "inverse-surface": "#32302a",
+                        "inverse-primary": "#ffb77b",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#006397",
+                        "on-tertiary-fixed": "#001d31",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e7e2d8",
+                        "primary-fixed-dim": "#ffb77b",
+                        "surface-container-high": "#ece8de",
+                        "secondary-container": "#e2dfde",
+                        "deep-orange": "#C1440E",
+                        "success": "#3FA34D",
+                        "outline": "#887363",
+                        "primary-container": "#e8820d",
+                        "on-surface": "#1d1c16",
+                        "outline-variant": "#dcc2af",
+                        "on-secondary-fixed-variant": "#474746"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "bento-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "data-md": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "data-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "data-md": ["14px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "data-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .neo-shadow {
+            box-shadow: 6px 6px 0px #1A1A1A;
+        }
+        .neo-shadow:active {
+            box-shadow: 2px 2px 0px #1A1A1A;
+            transform: translate(4px, 4px);
+        }
+        .neo-border {
+            border: 2px solid #1d1c16;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 flex justify-between items-center px-margin py-4 w-full bg-surface border-b-2 border-on-background shadow-[6px_6px_0px_#1A1A1A]">
+<div class="flex items-center gap-4">
+<img alt="GMPL Logo" class="h-10 w-10 object-contain neo-border" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-5H4T5-mbUEyLKE5ecWjl7tzHoeA0zydTTKrVcADfIqDlHfNcBvJrZWiw1ZWkUjvzGqw5sPKm9Up14Sa68b5NehYxuADDt8Z5wUfxRdpuSG-cEs6vJ6f2U90AIcbrs6k_pv-tECi_eOUsT6-kO7l6OqyIg09tzSq34ECwSYHw1FVENmLxLp_584pY3PW8lcu13BrttzNW5Itcs-7kQm3HMYAcvBJh3fuoaTchj9XEuxa6rhyRlTAS7Dnkf0MDLRV0EJCpxRSG9-6S"/>
+<h1 class="font-headline-md text-headline-md font-black tracking-tighter text-deep-orange">GANES ETPLAST</h1>
+</div>
+<div class="flex items-center gap-4">
+<button aria-label="Notifications" class="p-2 neo-border bg-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">notifications</span>
+</button>
+<button aria-label="Account" class="p-2 neo-border bg-surface hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="font-label-sm text-label-sm hidden md:block">VENDOR_742</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow p-margin overflow-y-auto">
+<!-- Header -->
+<div class="mb-8">
+<h2 class="font-display-lg text-display-lg text-on-background mb-2">Vendor Copilot</h2>
+<p class="font-body-lg text-body-lg text-secondary">Dashboard &amp; Daily Operations</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-bento-gap">
+<!-- Submit Today's Log CTA (Spans full width on mobile, 8 cols on desktop) -->
+<section class="col-span-1 lg:col-span-8 bg-surface p-6 neo-border neo-shadow flex flex-col justify-center items-start min-h-[200px] border-l-8 border-l-deep-orange">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-deep-orange" style="font-size: 32px; font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
+<h3 class="font-headline-lg text-headline-lg">Daily Log Due</h3>
+</div>
+<p class="font-body-md text-body-md text-secondary mb-6">Submit production quantities and raw material usage for current shift.</p>
+<button class="bg-primary-container text-on-primary-container font-headline-md text-headline-md uppercase px-8 py-4 neo-border neo-shadow w-full md:w-auto hover:bg-deep-orange hover:text-white transition-colors">
+                    Submit Today's Log
+                </button>
+</section>
+<!-- RM Balance Summary (Spans 4 cols on desktop) -->
+<section class="col-span-1 lg:col-span-4 bg-surface p-6 neo-border neo-shadow flex flex-col">
+<h3 class="font-headline-md text-headline-md mb-4 border-b-2 border-on-background pb-2">Critical Alerts</h3>
+<div class="flex items-start gap-3 p-3 bg-error-container neo-border mb-3">
+<span class="material-symbols-outlined text-error mt-0.5" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div>
+<p class="font-label-sm text-label-sm text-on-error-container uppercase">Low Material</p>
+<p class="font-data-md text-data-md text-on-error-container">PP_BLACK_GradeA <br/> &lt; 50kg remaining</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-3 bg-surface-container neo-border">
+<span class="material-symbols-outlined text-info mt-0.5" style="font-variation-settings: 'FILL' 1;">info</span>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface uppercase">Mould Maintenance</p>
+<p class="font-data-md text-data-md text-on-surface">Hinge Pad RR_LH <br/> Service due in 2 days</p>
+</div>
+</div>
+</section>
+<!-- Active Assignments -->
+<section class="col-span-1 lg:col-span-8 space-y-bento-gap">
+<h3 class="font-headline-lg text-headline-lg mb-2">Active Assignments</h3>
+<!-- Assignment Card 1 -->
+<div class="bg-surface p-6 neo-border neo-shadow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h4 class="font-headline-md text-headline-md">Hinge Pad RR_LH</h4>
+<p class="font-data-md text-data-md text-secondary">Mould ID: MLD-9022</p>
+</div>
+<span class="bg-success text-on-primary font-label-sm text-label-sm px-3 py-1 neo-border flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">play_arrow</span> ACTIVE
+                        </span>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-4">
+<div class="bg-surface-container p-3 neo-border">
+<p class="font-label-sm text-label-sm text-secondary uppercase">Target Qty</p>
+<p class="font-data-lg text-data-lg">5,000</p>
+</div>
+<div class="bg-surface-container p-3 neo-border">
+<p class="font-label-sm text-label-sm text-secondary uppercase">Produced</p>
+<p class="font-data-lg text-data-lg">3,250</p>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-1">
+<span class="font-label-sm text-label-sm uppercase">RM Balance (PP_BLACK)</span>
+<span class="font-data-md text-data-md">65%</span>
+</div>
+<div class="h-4 w-full bg-surface-container neo-border">
+<div class="h-full bg-info border-r-2 border-on-background" style="width: 65%"></div>
+</div>
+</div>
+</div>
+<!-- Assignment Card 2 -->
+<div class="bg-surface p-6 neo-border neo-shadow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h4 class="font-headline-md text-headline-md">Bracket Dash L</h4>
+<p class="font-data-md text-data-md text-secondary">Mould ID: MLD-1105</p>
+</div>
+<span class="bg-warning text-on-surface font-label-sm text-label-sm px-3 py-1 neo-border flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">pause</span> PAUSED
+                        </span>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-4 opacity-75">
+<div class="bg-surface-container p-3 neo-border">
+<p class="font-label-sm text-label-sm text-secondary uppercase">Target Qty</p>
+<p class="font-data-lg text-data-lg">10,000</p>
+</div>
+<div class="bg-surface-container p-3 neo-border">
+<p class="font-label-sm text-label-sm text-secondary uppercase">Produced</p>
+<p class="font-data-lg text-data-lg">8,900</p>
+</div>
+</div>
+<div class="opacity-75">
+<div class="flex justify-between mb-1">
+<span class="font-label-sm text-label-sm uppercase">RM Balance (ABS_NATURAL)</span>
+<span class="font-data-md text-data-md">15%</span>
+</div>
+<div class="h-4 w-full bg-surface-container neo-border">
+<div class="h-full bg-warning border-r-2 border-on-background" style="width: 15%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Edit Request Status -->
+<section class="col-span-1 lg:col-span-4 bg-surface p-6 neo-border neo-shadow h-fit">
+<h3 class="font-headline-md text-headline-md mb-4 border-b-2 border-on-background pb-2">Edit Requests</h3>
+<div class="space-y-4">
+<!-- Request 1 -->
+<div class="flex justify-between items-center p-3 hover:bg-surface-container transition-colors neo-border">
+<div>
+<p class="font-label-sm text-label-sm uppercase text-secondary">Log #4492</p>
+<p class="font-data-md text-data-md">Qty Correction</p>
+</div>
+<span class="bg-success text-on-primary font-label-sm text-label-sm px-2 py-1 neo-border">APPROVED</span>
+</div>
+<!-- Request 2 -->
+<div class="flex justify-between items-center p-3 hover:bg-surface-container transition-colors neo-border">
+<div>
+<p class="font-label-sm text-label-sm uppercase text-secondary">Log #4501</p>
+<p class="font-data-md text-data-md">RM Usage Update</p>
+</div>
+<span class="bg-surface-container-high text-on-surface font-label-sm text-label-sm px-2 py-1 neo-border">PENDING</span>
+</div>
+<!-- Request 3 -->
+<div class="flex justify-between items-center p-3 hover:bg-surface-container transition-colors neo-border">
+<div>
+<p class="font-label-sm text-label-sm uppercase text-secondary">Log #4410</p>
+<p class="font-data-md text-data-md">Date Change</p>
+</div>
+<span class="bg-danger text-on-error font-label-sm text-label-sm px-2 py-1 neo-border">REJECTED</span>
+</div>
+</div>
+<button class="mt-6 w-full py-2 bg-surface neo-border neo-shadow font-label-sm text-label-sm uppercase hover:bg-surface-container transition-colors">
+                     View All Requests
+                 </button>
+</section>
+</div>
+</main>
+</body></html>

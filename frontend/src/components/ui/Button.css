@@ -1,0 +1,77 @@
+.neo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  border: var(--border-width-md) solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+}
+
+.neo-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.neo-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* Variants */
+.neo-btn-primary {
+  background-color: var(--color-accent-blue);
+  color: white;
+}
+
+.neo-btn-secondary {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.neo-btn-danger {
+  background-color: var(--color-accent-red);
+  color: white;
+}
+
+.neo-btn-ghost {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.neo-btn-ghost:hover {
+  background-color: rgba(0,0,0,0.05);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Sizes */
+.neo-btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  border-width: var(--border-width-sm);
+  box-shadow: var(--shadow-sm);
+}
+.neo-btn-sm:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--color-border); }
+
+.neo-btn-md {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.neo-btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+.neo-btn-icon {
+  margin-right: 0.5rem;
+  display: flex;
+}

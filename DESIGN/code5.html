@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Raw Material Inventory - GANES ETPLAST</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fef9ef",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#FFFFFF",
+                        "secondary": "#5f5e5e",
+                        "on-primary-fixed-variant": "#6d3900",
+                        "surface-bright": "#fef9ef",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#93ccff",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-tertiary-container": "#003756",
+                        "tertiary-fixed": "#cce5ff",
+                        "on-secondary-container": "#636262",
+                        "danger": "#E63946",
+                        "surface-tint": "#904d00",
+                        "on-surface-variant": "#554335",
+                        "on-secondary": "#ffffff",
+                        "primary": "#904d00",
+                        "on-primary-fixed": "#2e1500",
+                        "on-error": "#ffffff",
+                        "surface-dim": "#dedad0",
+                        "on-background": "#1d1c16",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f8f3e9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "primary-fixed": "#ffdcc2",
+                        "on-primary-container": "#512900",
+                        "tertiary-container": "#00a4f6",
+                        "on-tertiary-fixed-variant": "#004b73",
+                        "surface-variant": "#e7e2d8",
+                        "warning": "#F2B705",
+                        "surface-container": "#f2ede3",
+                        "inverse-on-surface": "#f5f0e6",
+                        "info": "#2E86AB",
+                        "inverse-surface": "#32302a",
+                        "inverse-primary": "#ffb77b",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#006397",
+                        "on-tertiary-fixed": "#001d31",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e7e2d8",
+                        "primary-fixed-dim": "#ffb77b",
+                        "surface-container-high": "#ece8de",
+                        "secondary-container": "#e2dfde",
+                        "deep-orange": "#C1440E",
+                        "success": "#3FA34D",
+                        "outline": "#887363",
+                        "primary-container": "#e8820d",
+                        "on-surface": "#1d1c16",
+                        "outline-variant": "#dcc2af",
+                        "on-secondary-fixed-variant": "#474746"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "bento-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "data-md": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "data-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "data-md": ["14px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "data-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col md:flex-row font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Desktop SideNav -->
+<nav class="hidden md:flex fixed left-0 top-0 h-full flex-col pt-20 z-40 bg-surface dark:bg-inverse-surface h-screen w-64 border-r-2 border-on-background dark:border-outline-variant shadow-[6px_0px_0px_#1A1A1A] dark:shadow-[6px_0px_0px_#000000]">
+<div class="px-6 mb-8">
+<h2 class="font-headline-md text-headline-md text-primary">Industrial ERP</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mt-1 tracking-widest">Admin Console</p>
+</div>
+<div class="px-6 mb-6">
+<button class="w-full bg-deep-orange text-surface font-label-sm text-label-sm py-3 px-4 border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_#1A1A1A] active:translate-x-[4px] active:translate-y-[4px] active:shadow-[2px_2px_0px_#1A1A1A] transition-all flex items-center justify-center gap-2 uppercase tracking-wide">
+<span class="material-symbols-outlined" data-icon="add" data-weight="fill" style="font-variation-settings: 'FILL' 1;">add</span>
+                New Production Log
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto overflow-x-hidden">
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="precision_manufacturing">precision_manufacturing</span>
+                Moulds
+            </a>
+<a class="bg-primary-container text-on-primary-container border-2 border-on-background dark:border-on-surface shadow-[4px_4px_0px_#1A1A1A] m-2 p-3 flex items-center gap-3 font-bold font-label-sm text-label-sm active:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2" data-weight="fill" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+                Materials
+            </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+                Vendors
+            </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+                Repairs
+            </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+                Analytics
+            </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+                Copilot
+            </a>
+</div>
+<div class="mt-auto border-t-2 border-on-background dark:border-outline-variant p-2">
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high p-3 mx-2 my-1 flex items-center gap-3 transition-all hover:bg-surface-container-highest dark:hover:bg-surface-variant font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+                Support
+            </a>
+<div class="p-3 mx-2 mt-4 flex items-center gap-3 border-t-2 border-on-background pt-4">
+<img alt="User Avatar" class="w-10 h-10 rounded-full border-2 border-on-background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEuDe-YxD0d4h3Ag9QLuu9x8LXgZYvsX7ce9W1AVQvLzJx2rd4mpj9umHxqNFJL2YH0wBnzmam5_LK9h1Q-v-TWrIeCWrge5lDyTPeKQRlhWLrSByE1OzyHgfR5u7g55JlOkGC5iAsYK3wkvj-lvqT6uEAJk33Lx_uIcq6Ak6gzYOIdgAbFbS2AhdcfxpG83Y7rKmZOoiikv_h_xw-uhtwWzlw5XWQ5oRql9lDPUJWb1AOVpqoxb-tMuxludFZiJxZuFDvG6My45nB"/>
+<div>
+<p class="font-label-sm text-label-sm">Admin User</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Mobile Top App Bar (Only visible on small screens) -->
+<header class="md:hidden sticky top-0 z-50 flex justify-between items-center px-6 py-4 w-full bg-surface dark:bg-inverse-surface border-b-2 border-on-background dark:border-outline-variant shadow-[6px_6px_0px_#1A1A1A] dark:shadow-[6px_6px_0px_#000000]">
+<div class="text-headline-md font-headline-md font-black tracking-tighter text-deep-orange dark:text-primary-fixed-dim">
+            GANES ETPLAST
+        </div>
+<div class="flex gap-4">
+<button class="text-primary dark:text-inverse-primary hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all active:translate-x-[4px] active:translate-y-[4px] shadow-[2px_2px_0px_#1A1A1A]">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-primary dark:text-inverse-primary hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all active:translate-x-[4px] active:translate-y-[4px] shadow-[2px_2px_0px_#1A1A1A]">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 p-margin min-h-screen">
+<!-- Header Section -->
+<div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-8 pb-6 border-b-4 border-on-background">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-background uppercase tracking-tight">Raw Material Inventory</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2 max-w-2xl">Manage stock levels, allocations, and reorder points for all production polymers.</p>
+</div>
+<div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+<div class="relative flex-grow sm:flex-grow-0">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full sm:w-64 pl-10 pr-4 py-3 bg-surface border-2 border-on-background font-body-md text-body-md placeholder:text-on-surface-variant focus:outline-none focus:ring-0 focus:shadow-[4px_4px_0px_#1A1A1A] transition-shadow" placeholder="Search Materials..." type="text"/>
+</div>
+<button class="bg-primary-container text-on-primary-container font-headline-md text-[18px] py-3 px-8 border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_#1A1A1A] active:translate-x-[4px] active:translate-y-[4px] active:shadow-[2px_2px_0px_#1A1A1A] transition-all flex items-center justify-center gap-2 uppercase whitespace-nowrap">
+<span class="material-symbols-outlined" data-icon="add_box" data-weight="fill">add_box</span>
+                    Stock In
+                </button>
+</div>
+</div>
+<!-- Inventory Grid (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-bento-gap">
+<!-- Card 1: Critical Stock -->
+<div class="bg-surface border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] p-6 flex flex-col justify-between hover:shadow-[4px_4px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="inline-block bg-surface-container-high border-2 border-on-background px-2 py-1 font-label-sm text-label-sm mb-2">Polypropylene</span>
+<h3 class="font-headline-md text-headline-md">PP - XPPA-0597</h3>
+</div>
+<span class="bg-danger text-on-error border-2 border-on-background px-3 py-1 font-label-sm text-label-sm flex items-center gap-1 uppercase tracking-wider animate-pulse">
+<span class="material-symbols-outlined text-[16px]" data-icon="warning">warning</span>
+                            Low Stock
+                        </span>
+</div>
+<div class="mb-6">
+<div class="flex justify-between font-label-sm text-label-sm mb-1 uppercase">
+<span>Stock Level</span>
+<span class="font-data-md text-data-md text-danger">15%</span>
+</div>
+<div class="h-6 w-full border-2 border-on-background bg-surface-container-low overflow-hidden">
+<div class="h-full bg-danger w-[15%] border-r-2 border-on-background"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 border-t-2 border-on-background pt-4 mt-2">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Available</p>
+<p class="font-data-lg text-data-lg text-danger">1,250 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Allocated</p>
+<p class="font-data-lg text-data-lg">8,500 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+</div>
+</div>
+<!-- Card 2: Healthy Stock -->
+<div class="bg-surface border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] p-6 flex flex-col justify-between hover:shadow-[4px_4px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="inline-block bg-surface-container-high border-2 border-on-background px-2 py-1 font-label-sm text-label-sm mb-2">High-Density Polyethylene</span>
+<h3 class="font-headline-md text-headline-md">HDPE - B5502</h3>
+</div>
+<span class="bg-success text-on-primary border-2 border-on-background px-3 py-1 font-label-sm text-label-sm flex items-center gap-1 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+                            Optimal
+                        </span>
+</div>
+<div class="mb-6">
+<div class="flex justify-between font-label-sm text-label-sm mb-1 uppercase">
+<span>Stock Level</span>
+<span class="font-data-md text-data-md">78%</span>
+</div>
+<div class="h-6 w-full border-2 border-on-background bg-surface-container-low overflow-hidden">
+<div class="h-full bg-success w-[78%] border-r-2 border-on-background"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 border-t-2 border-on-background pt-4 mt-2">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Available</p>
+<p class="font-data-lg text-data-lg">15,400 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Allocated</p>
+<p class="font-data-lg text-data-lg">4,200 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+</div>
+</div>
+<!-- Card 3: Warning Stock -->
+<div class="bg-surface border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] p-6 flex flex-col justify-between hover:shadow-[4px_4px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="inline-block bg-surface-container-high border-2 border-on-background px-2 py-1 font-label-sm text-label-sm mb-2">Polycarbonate</span>
+<h3 class="font-headline-md text-headline-md">PC - Lexan 141R</h3>
+</div>
+<span class="bg-warning text-on-background border-2 border-on-background px-3 py-1 font-label-sm text-label-sm flex items-center gap-1 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]" data-icon="info">info</span>
+                            Reorder Soon
+                        </span>
+</div>
+<div class="mb-6">
+<div class="flex justify-between font-label-sm text-label-sm mb-1 uppercase">
+<span>Stock Level</span>
+<span class="font-data-md text-data-md text-on-background">32%</span>
+</div>
+<div class="h-6 w-full border-2 border-on-background bg-surface-container-low overflow-hidden">
+<div class="h-full bg-warning w-[32%] border-r-2 border-on-background"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 border-t-2 border-on-background pt-4 mt-2">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Available</p>
+<p class="font-data-lg text-data-lg">3,800 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Allocated</p>
+<p class="font-data-lg text-data-lg">2,100 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+</div>
+</div>
+<!-- Card 4: Healthy Stock -->
+<div class="bg-surface border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] p-6 flex flex-col justify-between hover:shadow-[4px_4px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+<div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="inline-block bg-surface-container-high border-2 border-on-background px-2 py-1 font-label-sm text-label-sm mb-2">Acrylonitrile Butadiene Styrene</span>
+<h3 class="font-headline-md text-headline-md">ABS - Terluran GP-35</h3>
+</div>
+<span class="bg-success text-on-primary border-2 border-on-background px-3 py-1 font-label-sm text-label-sm flex items-center gap-1 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+                            Optimal
+                        </span>
+</div>
+<div class="mb-6">
+<div class="flex justify-between font-label-sm text-label-sm mb-1 uppercase">
+<span>Stock Level</span>
+<span class="font-data-md text-data-md">65%</span>
+</div>
+<div class="h-6 w-full border-2 border-on-background bg-surface-container-low overflow-hidden">
+<div class="h-full bg-success w-[65%] border-r-2 border-on-background"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 border-t-2 border-on-background pt-4 mt-2">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Available</p>
+<p class="font-data-lg text-data-lg">12,000 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Allocated</p>
+<p class="font-data-lg text-data-lg">6,500 <span class="text-body-md font-body-md">kg</span></p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

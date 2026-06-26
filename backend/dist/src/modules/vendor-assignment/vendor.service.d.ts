@@ -1,0 +1,134 @@
+import { AuthContext } from '../../shared/types';
+export declare const VendorService: {
+    listVendors(ctx: AuthContext): Promise<{
+        id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        code: string;
+        deletedAt: Date | null;
+        createdBy: string | null;
+        updatedBy: string | null;
+        isInternal: boolean;
+        isActive: boolean;
+    }[]>;
+    createVendor(ctx: AuthContext, data: {
+        code: string;
+        name: string;
+        isInternal?: boolean;
+    }): Promise<{
+        id: string;
+        name: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        code: string;
+        deletedAt: Date | null;
+        createdBy: string | null;
+        updatedBy: string | null;
+        isInternal: boolean;
+        isActive: boolean;
+    }>;
+    listAssignments(ctx: AuthContext): Promise<({
+        rawMaterial: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            companyId: string;
+            code: string;
+            unit: string;
+            deletedAt: Date | null;
+            createdBy: string | null;
+            updatedBy: string | null;
+        };
+        mould: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            companyId: string;
+            code: string;
+            deletedAt: Date | null;
+            createdBy: string | null;
+            updatedBy: string | null;
+            cavityCount: number;
+            partWeightG: import("@prisma/client/runtime/library").Decimal;
+            runnerWeightG: import("@prisma/client/runtime/library").Decimal;
+            shotWeightG: import("@prisma/client/runtime/library").Decimal;
+            shotLifeLimit: bigint;
+            shotCountAccumulated: bigint;
+            lifecycleState: string;
+            version: number;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        deletedAt: Date | null;
+        createdBy: string | null;
+        updatedBy: string | null;
+        version: number;
+        vendorId: string;
+        mouldId: string;
+        status: string;
+        customerRequirementId: string | null;
+        rawMaterialId: string;
+        rmAssignedQty: import("@prisma/client/runtime/library").Decimal;
+        rmConsumedQty: import("@prisma/client/runtime/library").Decimal;
+        rmIrrecoverableLossQty: import("@prisma/client/runtime/library").Decimal;
+        rmRemainingQty: import("@prisma/client/runtime/library").Decimal;
+        assignedAt: Date;
+        revokedAt: Date | null;
+    })[]>;
+    assign(ctx: AuthContext, data: {
+        vendorId: string;
+        mouldId: string;
+        rawMaterialId: string;
+        rmAssignedQty: number;
+    }): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        deletedAt: Date | null;
+        createdBy: string | null;
+        updatedBy: string | null;
+        version: number;
+        vendorId: string;
+        mouldId: string;
+        status: string;
+        customerRequirementId: string | null;
+        rawMaterialId: string;
+        rmAssignedQty: import("@prisma/client/runtime/library").Decimal;
+        rmConsumedQty: import("@prisma/client/runtime/library").Decimal;
+        rmIrrecoverableLossQty: import("@prisma/client/runtime/library").Decimal;
+        rmRemainingQty: import("@prisma/client/runtime/library").Decimal;
+        assignedAt: Date;
+        revokedAt: Date | null;
+    }>;
+    revoke(ctx: AuthContext, id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        companyId: string;
+        deletedAt: Date | null;
+        createdBy: string | null;
+        updatedBy: string | null;
+        version: number;
+        vendorId: string;
+        mouldId: string;
+        status: string;
+        customerRequirementId: string | null;
+        rawMaterialId: string;
+        rmAssignedQty: import("@prisma/client/runtime/library").Decimal;
+        rmConsumedQty: import("@prisma/client/runtime/library").Decimal;
+        rmIrrecoverableLossQty: import("@prisma/client/runtime/library").Decimal;
+        rmRemainingQty: import("@prisma/client/runtime/library").Decimal;
+        assignedAt: Date;
+        revokedAt: Date | null;
+    }>;
+};
+//# sourceMappingURL=vendor.service.d.ts.map

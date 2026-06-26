@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Daily Production Log Entry - GANES ETPLAST</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;family=Space+Grotesk:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "background": "#fef9ef",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "surface": "#FFFFFF",
+                    "secondary": "#5f5e5e",
+                    "on-primary-fixed-variant": "#6d3900",
+                    "surface-bright": "#fef9ef",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed-dim": "#93ccff",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-tertiary-container": "#003756",
+                    "tertiary-fixed": "#cce5ff",
+                    "on-secondary-container": "#636262",
+                    "danger": "#E63946",
+                    "surface-tint": "#904d00",
+                    "on-surface-variant": "#554335",
+                    "on-secondary": "#ffffff",
+                    "primary": "#904d00",
+                    "on-primary-fixed": "#2e1500",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#dedad0",
+                    "on-background": "#1d1c16",
+                    "error-container": "#ffdad6",
+                    "surface-container-low": "#f8f3e9",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "primary-fixed": "#ffdcc2",
+                    "on-primary-container": "#512900",
+                    "tertiary-container": "#00a4f6",
+                    "on-tertiary-fixed-variant": "#004b73",
+                    "surface-variant": "#e7e2d8",
+                    "warning": "#F2B705",
+                    "surface-container": "#f2ede3",
+                    "inverse-on-surface": "#f5f0e6",
+                    "info": "#2E86AB",
+                    "inverse-surface": "#32302a",
+                    "inverse-primary": "#ffb77b",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#006397",
+                    "on-tertiary-fixed": "#001d31",
+                    "error": "#ba1a1a",
+                    "on-error-container": "#93000a",
+                    "surface-container-highest": "#e7e2d8",
+                    "primary-fixed-dim": "#ffb77b",
+                    "surface-container-high": "#ece8de",
+                    "secondary-container": "#e2dfde",
+                    "deep-orange": "#C1440E",
+                    "success": "#3FA34D",
+                    "outline": "#887363",
+                    "primary-container": "#e8820d",
+                    "on-surface": "#1d1c16",
+                    "outline-variant": "#dcc2af",
+                    "on-secondary-fixed-variant": "#474746"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin": "32px",
+                    "gutter": "24px",
+                    "base": "8px",
+                    "bento-gap": "16px"
+            },
+            "fontFamily": {
+                    "data-md": ["JetBrains Mono"],
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display-lg": ["Space Grotesk"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Space Grotesk"],
+                    "headline-md": ["Space Grotesk"],
+                    "data-lg": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "data-md": ["14px", {"lineHeight": "1.4", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "data-lg": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Neobrutalist UI Utilities */
+        .neo-shadow {
+            box-shadow: 6px 6px 0px #1A1A1A;
+            transition: all 0.15s ease-in-out;
+        }
+        .neo-shadow:active:not(:disabled), .neo-active {
+            box-shadow: 2px 2px 0px #1A1A1A;
+            transform: translate(4px, 4px);
+        }
+        .neo-shadow-sm {
+            box-shadow: 4px 4px 0px #1A1A1A;
+            transition: all 0.15s ease-in-out;
+        }
+        .neo-shadow-sm:focus-within {
+            box-shadow: 2px 2px 0px #1A1A1A;
+            transform: translate(2px, 2px);
+        }
+        
+        /* Hide number input spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-surface sticky top-0 z-50 flex justify-between items-center px-margin py-4 w-full border-b-2 border-on-background shadow-[6px_6px_0px_#1A1A1A]">
+<div class="flex items-center gap-4">
+<button aria-label="Go Back" class="p-2 border-2 border-transparent hover:border-on-background rounded-full transition-colors flex items-center justify-center text-on-surface-variant hover:text-on-background">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="font-headline-md text-headline-md font-black tracking-tighter text-deep-orange">
+                GANES ETPLAST
+            </div>
+</div>
+<div class="flex items-center gap-4">
+<button aria-label="Notifications" class="p-2 border-2 border-transparent hover:border-on-background rounded-full transition-colors flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button aria-label="Account" class="p-2 border-2 border-transparent hover:border-on-background rounded-full transition-colors flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas (Transactional - No Nav) -->
+<main class="flex-grow flex justify-center py-margin px-4 md:px-margin overflow-y-auto">
+<div class="w-full max-w-3xl flex flex-col gap-gutter">
+<!-- Page Header -->
+<div class="flex flex-col gap-2 mb-4">
+<h1 class="font-headline-lg text-headline-lg text-on-background">Daily Log for <span class="text-deep-orange">MLD-842-A</span></h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant">calendar_today</span>
+<span id="current-date">October 24, 2023</span>
+</p>
+</div>
+<!-- Warning Badge -->
+<div class="bg-warning border-2 border-on-background neo-shadow p-4 flex items-start gap-3 rounded-DEFAULT mb-2">
+<span class="material-symbols-outlined fill-icon text-on-background mt-0.5">lock</span>
+<div>
+<h3 class="font-headline-md text-body-lg font-bold text-on-background mb-1">Final Submission Warning</h3>
+<p class="font-body-md text-body-md text-on-background">This entry will lock permanently after submission. Please verify all quantities before finalizing.</p>
+</div>
+</div>
+<!-- The Form (Bento Layout) -->
+<form class="grid grid-cols-1 md:grid-cols-2 gap-bento-gap" id="daily-log-form">
+<!-- Accepted Qty -->
+<div class="bg-surface border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col gap-4">
+<label class="font-label-sm text-label-sm uppercase text-on-background">Accepted Quantity</label>
+<div class="flex items-center justify-between bg-surface-container-low border-2 border-on-background p-2 neo-shadow-sm h-[72px]">
+<button class="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background" onclick="decrement('accepted-qty')" type="button">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<input class="w-full text-center font-data-lg text-display-lg bg-transparent border-none focus:ring-0 text-success p-0 font-bold" id="accepted-qty" min="0" type="number" value="0"/>
+<button class="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background" onclick="increment('accepted-qty')" type="button">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<!-- Rejected Qty -->
+<div class="bg-surface border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col gap-4">
+<label class="font-label-sm text-label-sm uppercase text-on-background flex justify-between">
+<span>Rejected Quantity</span>
+<span class="text-danger">Critical Metric</span>
+</label>
+<div class="flex items-center justify-between bg-surface-container-low border-2 border-on-background p-2 neo-shadow-sm h-[72px]">
+<button class="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background" onclick="decrement('rejected-qty')" type="button">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<input class="w-full text-center font-data-lg text-display-lg bg-transparent border-none focus:ring-0 text-danger p-0 font-bold" id="rejected-qty" min="0" type="number" value="0"/>
+<button class="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background" onclick="increment('rejected-qty')" type="button">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<!-- Downtime Section (Spans full width) -->
+<div class="col-span-1 md:col-span-2 bg-surface border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col gap-6">
+<div class="flex items-center justify-between border-b-2 border-on-background pb-6">
+<div class="flex flex-col gap-1">
+<label class="font-headline-md text-headline-md text-on-background m-0">Record Downtime</label>
+<span class="font-body-md text-body-md text-on-surface-variant">Toggle if the machine experienced delays.</span>
+</div>
+<!-- Chunky Toggle -->
+<label class="flex items-center cursor-pointer" for="downtime-toggle">
+<div class="relative">
+<input class="sr-only" id="downtime-toggle" onchange="toggleDowntime()" type="checkbox"/>
+<div class="block bg-surface-dim border-2 border-on-background w-16 h-10 rounded-full neo-shadow"></div>
+<div class="dot absolute left-1.5 top-1.5 bg-on-background w-7 h-7 rounded-full transition-transform duration-200"></div>
+</div>
+</label>
+</div>
+<div class="hidden flex-col md:flex-row gap-6 opacity-50 transition-opacity duration-300" id="downtime-fields">
+<div class="flex-1 flex flex-col gap-2">
+<label class="font-label-sm text-label-sm uppercase text-on-background">Downtime Reason</label>
+<div class="relative w-full h-[56px]">
+<select class="w-full h-full appearance-none bg-surface-container-low border-2 border-on-background neo-shadow-sm focus:outline-none focus:ring-0 rounded-DEFAULT px-4 font-body-lg text-body-lg text-on-background cursor-not-allowed" disabled="" id="downtime-reason">
+<option disabled="" selected="" value="">Select Primary Reason</option>
+<option value="manpower">Manpower Shortage</option>
+<option value="machine">Machine Failure</option>
+<option value="mould">Mould Issue/Repair</option>
+<option value="power">Power Outage</option>
+<option value="other">Other</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-on-background">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-2">
+<label class="font-label-sm text-label-sm uppercase text-on-background">Duration (Minutes)</label>
+<input class="w-full h-[56px] bg-surface-container-low border-2 border-on-background neo-shadow-sm focus:outline-none focus:ring-0 rounded-DEFAULT px-4 font-data-lg text-data-lg text-on-background cursor-not-allowed" disabled="" id="downtime-duration" placeholder="0" type="number"/>
+</div>
+</div>
+</div>
+<!-- Dispatched Qty (Spans full width) -->
+<div class="col-span-1 md:col-span-2 bg-surface-container-low border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+<div class="flex flex-col gap-2 w-full md:w-1/2">
+<label class="font-headline-md text-headline-md text-on-background">Dispatched Quantity</label>
+<p class="font-body-md text-body-md text-on-surface-variant">Number of accepted units sent to central logistics today.</p>
+</div>
+<div class="w-full md:w-1/2 flex items-center bg-surface border-2 border-on-background p-2 neo-shadow-sm h-[72px]">
+<span class="material-symbols-outlined text-on-background px-4">local_shipping</span>
+<input class="w-full h-full bg-transparent border-none focus:ring-0 font-data-lg text-headline-md text-on-background px-2" id="dispatched-qty" min="0" placeholder="Enter amount" type="number"/>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="col-span-1 md:col-span-2 flex flex-col md:flex-row gap-4 mt-4">
+<button class="flex-1 h-16 bg-surface border-2 border-on-background text-on-background font-headline-md text-headline-md uppercase neo-shadow hover:bg-surface-container-high transition-colors flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined">close</span> Cancel
+                    </button>
+<button class="flex-[2] h-16 bg-primary-container border-2 border-on-background text-on-primary-container font-headline-md text-headline-md uppercase neo-shadow hover:bg-surface-tint transition-colors flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined">send</span> Submit Final Log
+                    </button>
+</div>
+</form>
+</div>
+</main>
+<script>
+        // Date formatting
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', dateOptions);
+
+        // Stepper Logic
+        function increment(id) {
+            const el = document.getElementById(id);
+            el.value = parseInt(el.value || 0) + 1;
+        }
+
+        function decrement(id) {
+            const el = document.getElementById(id);
+            const val = parseInt(el.value || 0);
+            if (val > 0) el.value = val - 1;
+        }
+
+        // Downtime Toggle Logic
+        function toggleDowntime() {
+            const checkbox = document.getElementById('downtime-toggle');
+            const dot = document.querySelector('.dot');
+            const fieldsContainer = document.getElementById('downtime-fields');
+            const reasonSelect = document.getElementById('downtime-reason');
+            const durationInput = document.getElementById('downtime-duration');
+
+            if (checkbox.checked) {
+                dot.style.transform = 'translateX(100%)';
+                dot.classList.remove('bg-on-background');
+                dot.classList.add('bg-primary-container');
+                
+                fieldsContainer.classList.remove('hidden', 'opacity-50');
+                fieldsContainer.classList.add('flex');
+                
+                reasonSelect.disabled = false;
+                reasonSelect.classList.remove('cursor-not-allowed', 'bg-surface-container-low');
+                reasonSelect.classList.add('bg-surface', 'cursor-pointer');
+                
+                durationInput.disabled = false;
+                durationInput.classList.remove('cursor-not-allowed', 'bg-surface-container-low');
+                durationInput.classList.add('bg-surface', 'cursor-text');
+            } else {
+                dot.style.transform = 'translateX(0)';
+                dot.classList.add('bg-on-background');
+                dot.classList.remove('bg-primary-container');
+                
+                fieldsContainer.classList.add('opacity-50');
+                setTimeout(() => {
+                    if(!checkbox.checked) fieldsContainer.classList.add('hidden');
+                    fieldsContainer.classList.remove('flex');
+                }, 300); // match transition duration
+                
+                reasonSelect.disabled = true;
+                reasonSelect.classList.add('cursor-not-allowed', 'bg-surface-container-low');
+                reasonSelect.classList.remove('bg-surface', 'cursor-pointer');
+                
+                durationInput.disabled = true;
+                durationInput.classList.add('cursor-not-allowed', 'bg-surface-container-low');
+                durationInput.classList.remove('bg-surface', 'cursor-text');
+                
+                reasonSelect.value = "";
+                durationInput.value = "";
+            }
+        }
+    </script>
+</body></html>

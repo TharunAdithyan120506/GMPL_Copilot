@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edit Request Approval Queue - GANES ETPLAST</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fef9ef",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#FFFFFF",
+                        "secondary": "#5f5e5e",
+                        "on-primary-fixed-variant": "#6d3900",
+                        "surface-bright": "#fef9ef",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#93ccff",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-tertiary-container": "#003756",
+                        "tertiary-fixed": "#cce5ff",
+                        "on-secondary-container": "#636262",
+                        "danger": "#E63946",
+                        "surface-tint": "#904d00",
+                        "on-surface-variant": "#554335",
+                        "on-secondary": "#ffffff",
+                        "primary": "#904d00",
+                        "on-primary-fixed": "#2e1500",
+                        "on-error": "#ffffff",
+                        "surface-dim": "#dedad0",
+                        "on-background": "#1d1c16",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f8f3e9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "primary-fixed": "#ffdcc2",
+                        "on-primary-container": "#512900",
+                        "tertiary-container": "#00a4f6",
+                        "on-tertiary-fixed-variant": "#004b73",
+                        "surface-variant": "#e7e2d8",
+                        "warning": "#F2B705",
+                        "surface-container": "#f2ede3",
+                        "inverse-on-surface": "#f5f0e6",
+                        "info": "#2E86AB",
+                        "inverse-surface": "#32302a",
+                        "inverse-primary": "#ffb77b",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#006397",
+                        "on-tertiary-fixed": "#001d31",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e7e2d8",
+                        "primary-fixed-dim": "#ffb77b",
+                        "surface-container-high": "#ece8de",
+                        "secondary-container": "#e2dfde",
+                        "deep-orange": "#C1440E",
+                        "success": "#3FA34D",
+                        "outline": "#887363",
+                        "primary-container": "#e8820d",
+                        "on-surface": "#1d1c16",
+                        "outline-variant": "#dcc2af",
+                        "on-secondary-fixed-variant": "#474746"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "bento-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "data-md": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "data-lg": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "data-md": ["14px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "data-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fef9ef; /* bg-background */
+        }
+        .neobrutalist-shadow {
+            box-shadow: 6px 6px 0px #1A1A1A;
+        }
+        .neobrutalist-shadow-sm {
+            box-shadow: 4px 4px 0px #1A1A1A;
+        }
+        .neobrutalist-shadow-hover:hover {
+            box-shadow: 2px 2px 0px #1A1A1A;
+            transform: translate(4px, 4px);
+        }
+    </style>
+</head>
+<body class="text-on-background font-body-md antialiased overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-inverse-surface sticky top-0 z-50 flex justify-between items-center px-margin py-4 w-full border-b-2 border-on-background dark:border-outline-variant shadow-[6px_6px_0px_#1A1A1A] dark:shadow-[6px_6px_0px_#000000]">
+<div class="flex items-center gap-4">
+<button aria-label="Menu" class="md:hidden p-2 hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<div class="text-headline-md font-headline-md font-black tracking-tighter text-deep-orange dark:text-primary-fixed-dim">
+                GANES ETPLAST
+            </div>
+</div>
+<div class="hidden md:flex flex-1 max-w-xl mx-8 relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2 border-2 border-on-background bg-surface rounded-none focus:outline-none focus:ring-0 focus:border-on-background neobrutalist-shadow-sm transition-all focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-[2px_2px_0px_#1A1A1A] font-body-md text-body-md text-on-background placeholder-on-surface-variant" placeholder="Search..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button aria-label="notifications" class="p-2 text-primary dark:text-inverse-primary hover:bg-surface-container-high rounded transition-colors relative">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+<span class="absolute top-1 right-1 w-2.5 h-2.5 bg-danger rounded-full border border-surface"></span>
+</button>
+<button aria-label="account_circle" class="p-2 text-primary dark:text-inverse-primary hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">account_circle</span>
+</button>
+</div>
+</header>
+<div class="flex h-[calc(100vh-80px)] overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col bg-surface dark:bg-inverse-surface h-screen w-64 border-r-2 border-on-background dark:border-outline-variant shadow-[6px_0px_0px_#1A1A1A] dark:shadow-[6px_0px_0px_#000000] fixed left-0 top-[80px] z-40 overflow-y-auto pb-24">
+<div class="p-margin border-b-2 border-on-background">
+<h2 class="font-headline-md text-headline-md text-primary">Industrial ERP</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Admin Console</p>
+<button class="mt-6 w-full bg-primary-container text-on-primary-container border-2 border-on-background shadow-[4px_4px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all p-3 font-label-sm text-label-sm uppercase flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">add</span>
+                    New Production Log
+                </button>
+</div>
+<div class="flex-1 py-4">
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+                    Dashboard
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">precision_manufacturing</span>
+                    Moulds
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+                    Materials
+                </a>
+<a class="bg-primary-container text-on-primary-container border-2 border-on-background dark:border-on-surface shadow-[4px_4px_0px_#1A1A1A] m-2 p-3 flex items-center gap-3 font-bold rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">factory</span>
+                    Vendors
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">build</span>
+                    Repairs
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">analytics</span>
+                    Analytics
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">smart_toy</span>
+                    Copilot
+                </a>
+</div>
+<div class="mt-auto border-t-2 border-on-background p-4">
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+                    Settings
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-variant p-3 mx-2 my-1 flex items-center gap-3 transition-all rounded font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+                    Support
+                </a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-margin overflow-y-auto">
+<!-- Header & Filters -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-margin gap-4">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-background mb-2">Approval Queue</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Review vendor edit requests for production logs and material usage.</p>
+</div>
+<div class="flex items-center gap-4 bg-surface border-2 border-on-background p-1 neobrutalist-shadow-sm">
+<button class="bg-primary-container text-on-primary-container font-label-sm text-label-sm px-6 py-2 border-2 border-transparent">
+                        Pending (12)
+                    </button>
+<button class="text-on-surface-variant hover:bg-surface-container-low font-label-sm text-label-sm px-6 py-2 transition-colors">
+                        History
+                    </button>
+</div>
+</div>
+<!-- Approval Queue List -->
+<div class="flex flex-col gap-bento-gap">
+<!-- Card 1 -->
+<div class="bg-surface border-2 border-on-background p-6 neobrutalist-shadow">
+<div class="flex flex-col lg:flex-row justify-between gap-6">
+<!-- Left Info -->
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-4">
+<span class="bg-warning/20 border-2 border-on-background px-3 py-1 font-label-sm text-label-sm text-on-background flex items-center gap-2 w-fit">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">pending_actions</span>
+                                    Pending Review
+                                </span>
+<span class="font-data-md text-data-md text-secondary">Req #REQ-8902</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-2">Production Log Adjustment</h3>
+<div class="flex items-center gap-2 mb-6 font-body-md text-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">factory</span>
+                                Vendor: <strong>VN-A44 (Alpha Plastics Ltd)</strong>
+</div>
+<!-- Reason -->
+<div class="bg-surface-container-low border border-outline-variant p-4 rounded-sm">
+<span class="font-label-sm text-label-sm text-secondary uppercase block mb-1">Reason for Change</span>
+<p class="font-body-md text-body-md text-on-background">Operator error during initial entry at end of shift. Corrected machine counter readings indicate lower yield.</p>
+</div>
+</div>
+<!-- Right Comparison & Actions -->
+<div class="flex-1 flex flex-col justify-between">
+<!-- Comparison -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="bg-error-container/30 border-2 border-on-background p-4 text-center">
+<span class="font-label-sm text-label-sm text-error uppercase block mb-2">Original Value</span>
+<span class="font-data-lg text-data-lg line-through text-on-surface-variant">12,500 units</span>
+</div>
+<div class="bg-success/10 border-2 border-on-background p-4 text-center relative">
+<span class="absolute -top-3 -right-3 bg-surface border-2 border-on-background rounded-full w-8 h-8 flex items-center justify-center text-success">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">arrow_upward</span>
+</span>
+<span class="font-label-sm text-label-sm text-success uppercase block mb-2">Proposed Value</span>
+<span class="font-data-lg text-data-lg font-bold text-on-background">11,800 units</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex gap-4">
+<button class="flex-1 bg-success text-on-primary border-2 border-on-background p-4 font-label-sm text-label-sm uppercase tracking-wider neobrutalist-shadow-sm neobrutalist-shadow-hover flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                    Approve Change
+                                </button>
+<button class="flex-1 bg-surface text-danger border-2 border-on-background p-4 font-label-sm text-label-sm uppercase tracking-wider neobrutalist-shadow-sm neobrutalist-shadow-hover flex items-center justify-center gap-2 hover:bg-error-container/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cancel</span>
+                                    Reject
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface border-2 border-on-background p-6 neobrutalist-shadow">
+<div class="flex flex-col lg:flex-row justify-between gap-6">
+<!-- Left Info -->
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-4">
+<span class="bg-warning/20 border-2 border-on-background px-3 py-1 font-label-sm text-label-sm text-on-background flex items-center gap-2 w-fit">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">pending_actions</span>
+                                    Pending Review
+                                </span>
+<span class="font-data-md text-data-md text-secondary">Req #REQ-8903</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-2">Material Purge Time</h3>
+<div class="flex items-center gap-2 mb-6 font-body-md text-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">factory</span>
+                                Vendor: <strong>VN-B12 (Beta Mouldings)</strong>
+</div>
+<!-- Reason -->
+<div class="bg-surface-container-low border border-outline-variant p-4 rounded-sm">
+<span class="font-label-sm text-label-sm text-secondary uppercase block mb-1">Reason for Change</span>
+<p class="font-body-md text-body-md text-on-background">Material contamination required extended purge cycle. Adjusting downtime log to reflect accurate non-productive hours.</p>
+</div>
+</div>
+<!-- Right Comparison & Actions -->
+<div class="flex-1 flex flex-col justify-between">
+<!-- Comparison -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="bg-error-container/30 border-2 border-on-background p-4 text-center">
+<span class="font-label-sm text-label-sm text-error uppercase block mb-2">Original Value</span>
+<span class="font-data-lg text-data-lg line-through text-on-surface-variant">45 mins</span>
+</div>
+<div class="bg-success/10 border-2 border-on-background p-4 text-center relative">
+<span class="absolute -top-3 -right-3 bg-surface border-2 border-on-background rounded-full w-8 h-8 flex items-center justify-center text-danger">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">arrow_upward</span>
+</span>
+<span class="font-label-sm text-label-sm text-success uppercase block mb-2">Proposed Value</span>
+<span class="font-data-lg text-data-lg font-bold text-on-background">120 mins</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex gap-4">
+<button class="flex-1 bg-success text-on-primary border-2 border-on-background p-4 font-label-sm text-label-sm uppercase tracking-wider neobrutalist-shadow-sm neobrutalist-shadow-hover flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                    Approve Change
+                                </button>
+<button class="flex-1 bg-surface text-danger border-2 border-on-background p-4 font-label-sm text-label-sm uppercase tracking-wider neobrutalist-shadow-sm neobrutalist-shadow-hover flex items-center justify-center gap-2 hover:bg-error-container/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cancel</span>
+                                    Reject
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
