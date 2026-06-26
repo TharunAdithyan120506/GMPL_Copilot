@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 interface ProductionLog {
   id: string;
@@ -122,7 +122,7 @@ export function Logs() {
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      {user?.role === 'vendor' && log.status === 'locked' && (
+                      {user?.role === 'vendor' && ['submitted', 'corrected'].includes(log.status) && (
                         <button 
                           onClick={() => openEditModal(log)}
                           className="bg-primary-container text-on-primary-container border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm px-3 py-1 uppercase hover:neo-active"
@@ -154,7 +154,7 @@ export function Logs() {
             </div>
             
             <form onSubmit={handleRequestEdit} className="p-6 flex flex-col gap-4">
-              <p className="font-body-md text-body-md">You are requesting an edit to a locked log. This requires company approval.</p>
+              <p className="font-body-md text-body-md">You are requesting an edit to a submitted log. This requires company approval.</p>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">

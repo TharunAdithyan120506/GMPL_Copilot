@@ -6,7 +6,7 @@ const auth_middleware_1 = require("../../cross-cutting/auth/auth.middleware");
 const response_1 = require("../../shared/response");
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.authenticate);
-router.get('/', async (req, res) => {
+router.get('/', (0, auth_middleware_1.authorize)('repair.view'), async (req, res) => {
     try {
         const data = await repair_records_service_1.RepairService.list(req.auth);
         return (0, response_1.success)(res, data);
@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
         return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
     }
 });
-router.post('/', async (req, res) => {
+router.post('/', (0, auth_middleware_1.authorize)('repair.create'), async (req, res) => {
     try {
         const data = await repair_records_service_1.RepairService.create(req.auth, req.body);
         return (0, response_1.success)(res, data, 201);
@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
         return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
     }
 });
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', (0, auth_middleware_1.authorize)('repair.update'), async (req, res) => {
     try {
         const data = await repair_records_service_1.RepairService.updateStatus(req.auth, req.params.id, req.body.status, req.body.reworkDescription);
         return (0, response_1.success)(res, data);

@@ -15,4 +15,40 @@ router.get('/dashboard', async (req, res) => {
         return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
     }
 });
+router.get('/production', async (req, res) => {
+    try {
+        const data = await analytics_service_1.AnalyticsService.getProduction(req.auth);
+        return (0, response_1.success)(res, data);
+    }
+    catch (err) {
+        return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
+    }
+});
+router.get('/raw-material', async (req, res) => {
+    try {
+        const data = await analytics_service_1.AnalyticsService.getMaterials(req.auth);
+        return (0, response_1.success)(res, data);
+    }
+    catch (err) {
+        return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
+    }
+});
+router.get('/mould-life', async (req, res) => {
+    try {
+        const data = await analytics_service_1.AnalyticsService.getMouldLife(req.auth);
+        return (0, response_1.success)(res, data);
+    }
+    catch (err) {
+        return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
+    }
+});
+router.get('/downtime', async (req, res) => {
+    try {
+        const data = await analytics_service_1.AnalyticsService.getDowntime(req.auth);
+        return (0, response_1.success)(res, data);
+    }
+    catch (err) {
+        return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
+    }
+});
 exports.default = router;

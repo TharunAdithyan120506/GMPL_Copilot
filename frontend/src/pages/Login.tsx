@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import api from '../utils/api';
 
 export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const showDevOverrides = import.meta.env.DEV;
   
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -37,8 +38,9 @@ export function Login() {
     }
   };
 
-  // Temp mock
-  const handleMockLogin = async (role: 'company' | 'vendor') => {
+  const handleDevLogin = async (role: 'company' | 'vendor') => {
+    if (!showDevOverrides) return;
+
     setLoading(true);
     setError('');
     try {
@@ -50,7 +52,7 @@ export function Login() {
         login(accessToken, user);
         navigate('/');
       }
-    } catch (err: any) {
+    } catch {
       setError('Development override failed to authenticate with backend.');
     } finally {
       setLoading(false);
@@ -95,7 +97,7 @@ export function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full h-[56px] bg-surface-container-low border-2 border-on-background neo-shadow-sm focus:outline-none focus:ring-0 px-4 font-body-md text-on-background" 
-              placeholder="••••••••"
+              placeholder="Password"
               disabled={loading}
             />
           </div>
@@ -105,17 +107,19 @@ export function Login() {
           </button>
         </form>
 
-        <div className="mt-4 pt-4 border-t-2 border-on-background">
-          <p className="font-label-sm text-label-sm text-on-surface-variant uppercase mb-4 text-center">Development Overrides</p>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => handleMockLogin('company')} className="flex-1 bg-surface border-2 border-on-background py-2 font-label-sm text-label-sm uppercase neo-shadow hover:bg-surface-container-high transition-colors">
-              Admin
-            </button>
-            <button type="button" onClick={() => handleMockLogin('vendor')} className="flex-1 bg-surface border-2 border-on-background py-2 font-label-sm text-label-sm uppercase neo-shadow hover:bg-surface-container-high transition-colors">
-              Vendor
-            </button>
+        {showDevOverrides && (
+          <div className="mt-4 pt-4 border-t-2 border-on-background">
+            <p className="font-label-sm text-label-sm text-on-surface-variant uppercase mb-4 text-center">Development Overrides</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => handleDevLogin('company')} className="flex-1 bg-surface border-2 border-on-background py-2 font-label-sm text-label-sm uppercase neo-shadow hover:bg-surface-container-high transition-colors">
+                Admin
+              </button>
+              <button type="button" onClick={() => handleDevLogin('vendor')} className="flex-1 bg-surface border-2 border-on-background py-2 font-label-sm text-label-sm uppercase neo-shadow hover:bg-surface-container-high transition-colors">
+                Vendor
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

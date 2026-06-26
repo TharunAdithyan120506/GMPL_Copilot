@@ -3,8 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationService = void 0;
 const prisma_1 = require("../../shared/prisma");
 exports.NotificationService = {
-    async enqueue(companyId, type, payload) {
-        return prisma_1.prisma.notification.create({
+    async enqueue(companyId, type, payload, tx) {
+        const client = tx ?? prisma_1.prisma;
+        return client.notification.create({
             data: { companyId, type, payload, status: 'pending' },
         });
     },

@@ -4,6 +4,22 @@ exports.MouldService = void 0;
 const prisma_1 = require("../../shared/prisma");
 const errors_1 = require("../../shared/errors");
 const audit_service_1 = require("../../cross-cutting/audit/audit.service");
+function activeAssignmentInclude(ctx) {
+    return {
+        assignments: {
+            where: {
+                status: 'active',
+                deletedAt: null,
+                ...(ctx.role === 'vendor' ? { vendorId: ctx.vendorId } : {}),
+            },
+            include: {
+                vendor: { select: { id: true, code: true, name: true, isActive: true } },
+                rawMaterial: { select: { id: true, code: true, name: true, unit: true } },
+            },
+            orderBy: { assignedAt: 'desc' },
+        },
+    };
+}
 exports.MouldService = {
     async list(ctx) {
         const where = { companyId: ctx.companyId, deletedAt: null };
@@ -13,6 +29,7 @@ exports.MouldService = {
         }
         return prisma_1.prisma.mould.findMany({
             where,
+            include: activeAssignmentInclude(ctx),
             orderBy: { name: 'asc' },
         });
     },
@@ -21,7 +38,7 @@ exports.MouldService = {
         if (ctx.role === 'vendor') {
             where.assignments = { some: { vendorId: ctx.vendorId, status: 'active' } };
         }
-        const mould = await prisma_1.prisma.mould.findUnique({ where });
+        const mould = await prisma_1.prisma.mould.findUnique({ where, include: activeAssignmentInclude(ctx) });
         if (!mould)
             throw errors_1.Errors.notFound('Mould');
         return mould;

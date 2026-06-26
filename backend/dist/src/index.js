@@ -17,6 +17,9 @@ const analytics_routes_1 = __importDefault(require("./modules/analytics/analytic
 const ai_copilot_routes_1 = __importDefault(require("./modules/ai-copilot/ai-copilot.routes"));
 const repair_records_routes_1 = __importDefault(require("./modules/repair-records/repair-records.routes"));
 const prisma_1 = require("./shared/prisma");
+BigInt.prototype.toJSON = function () {
+    return Number(this.toString());
+};
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;

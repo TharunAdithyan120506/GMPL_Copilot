@@ -31,4 +31,4 @@ export type LogStatus = 'draft' | 'submitted' | 'correction_pending' | 'correcte
 export type AssignmentStatus = 'active' | 'revoked' | 'completed';
 export type MouldLifecycleState = 'active' | 'flagged_for_replacement' | 'in_repair' | 'retired';
 export type EditRequestStatus = 'pending' | 'approved' | 'rejected';
-export type RepairStatus = 'open' | 'in_progress' | 'reworked' | 'closed';
+export type RepairStatus = 'transit' | 'repair' | 'ready' | 'scrapped';

@@ -14,7 +14,7 @@ export function Vendors() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [formData, setFormData] = useState({ name: '', code: '', sharedLoginId: '' });
+  const [formData, setFormData] = useState({ name: '', code: '', sharedLoginId: '', initialPassword: '' });
   const [assignData, setAssignData] = useState({ vendorId: '', mouldId: '', rawMaterialId: '', rmAssignedQty: '' });
   
   const [moulds, setMoulds] = useState<any[]>([]);
@@ -46,7 +46,7 @@ export function Vendors() {
     try {
       await api.post('/vendors', formData);
       setShowModal(false);
-      setFormData({ name: '', code: '', sharedLoginId: '' });
+      setFormData({ name: '', code: '', sharedLoginId: '', initialPassword: '' });
       fetchData();
     } catch (err) {
       console.error('Failed to create vendor:', err);
@@ -198,6 +198,16 @@ export function Vendors() {
                   type="text" 
                   value={formData.sharedLoginId}
                   onChange={e => setFormData(p => ({...p, sharedLoginId: e.target.value}))}
+                  className="w-full bg-surface-container-low border-2 border-on-background p-3 focus:outline-none focus:shadow-[4px_4px_0px_#1A1A1A]" 
+                />
+              </div>
+              <div>
+                <label className="font-label-sm uppercase text-secondary block mb-1">Initial Password</label>
+                <input 
+                  type="password" 
+                  value={formData.initialPassword}
+                  onChange={e => setFormData(p => ({...p, initialPassword: e.target.value}))}
+                  placeholder="Defaults to password"
                   className="w-full bg-surface-container-low border-2 border-on-background p-3 focus:outline-none focus:shadow-[4px_4px_0px_#1A1A1A]" 
                 />
               </div>

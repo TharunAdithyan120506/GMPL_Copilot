@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RepairService = void 0;
 const prisma_1 = require("../../shared/prisma");
 const errors_1 = require("../../shared/errors");
+const audit_service_1 = require("../../cross-cutting/audit/audit.service");
 exports.RepairService = {
     async list(ctx) {
         if (ctx.role !== 'company')
@@ -19,16 +20,33 @@ exports.RepairService = {
     async create(ctx, data) {
         if (ctx.role !== 'company')
             throw errors_1.Errors.forbidden('Only company can create repairs');
-        // Also update mould status to in_repair
-        const [, repair] = await prisma_1.prisma.$transaction([
-            prisma_1.prisma.mould.update({
-                where: { id: data.mouldId },
-                data: { lifecycleState: 'in_repair' }
-            }),
-            prisma_1.prisma.repairRecord.create({
+        return prisma_1.prisma.$transaction(async (tx) => {
+            const mould = await tx.mould.findFirst({
+                where: { id: data.mouldId, companyId: ctx.companyId, deletedAt: null },
+            });
+            if (!mould)
+                throw errors_1.Errors.notFound('Mould');
+            await tx.mould.update({
+                where: { id: mould.id },
+                data: { lifecycleState: 'in_repair', updatedBy: ctx.userId },
+            });
+            await tx.mouldLifecycleEvent.create({
                 data: {
                     companyId: ctx.companyId,
-                    mouldId: data.mouldId,
+                    mouldId: mould.id,
+                    eventType: 'moved_to_repair',
+                    fromState: mould.lifecycleState,
+                    toState: 'in_repair',
+                    shotCountAtEvent: mould.shotCountAccumulated,
+                    triggeredBy: ctx.userId,
+                    triggerKind: 'manual',
+                    createdBy: ctx.userId,
+                },
+            });
+            const repair = await tx.repairRecord.create({
+                data: {
+                    companyId: ctx.companyId,
+                    mouldId: mould.id,
                     reportedBy: ctx.userId,
                     status: 'transit',
                     issueDescription: data.issueDescription,
@@ -36,9 +54,19 @@ exports.RepairService = {
                     createdBy: ctx.userId,
                     updatedBy: ctx.userId
                 }
-            })
-        ]);
-        return repair;
+            });
+            await audit_service_1.AuditService.write({
+                tx,
+                companyId: ctx.companyId,
+                entityType: 'repair_record',
+                entityId: repair.id,
+                action: 'create',
+                actorUserId: ctx.userId,
+                actorRole: ctx.role,
+                after: repair,
+            });
+            return repair;
+        });
     },
     async updateStatus(ctx, id, status, reworkDescription) {
         if (ctx.role !== 'company')
@@ -52,18 +80,53 @@ exports.RepairService = {
         if (status === 'scrapped' || status === 'ready') {
             updateData.closedAt = new Date();
         }
-        const repair = await prisma_1.prisma.repairRecord.update({
-            where: { id },
-            data: updateData
+        else {
+            updateData.closedAt = null;
+        }
+        return prisma_1.prisma.$transaction(async (tx) => {
+            const before = await tx.repairRecord.findFirst({
+                where: { id, companyId: ctx.companyId, deletedAt: null },
+            });
+            if (!before)
+                throw errors_1.Errors.notFound('Repair record');
+            const repair = await tx.repairRecord.update({
+                where: { id },
+                data: updateData
+            });
+            if (['repair', 'transit', 'ready', 'scrapped'].includes(status)) {
+                const toState = status === 'ready' ? 'active' : status === 'scrapped' ? 'retired' : 'in_repair';
+                const mould = await tx.mould.findFirst({
+                    where: { id: repair.mouldId, companyId: ctx.companyId },
+                });
+                if (!mould)
+                    throw errors_1.Errors.notFound('Mould');
+                await tx.mould.update({ where: { id: repair.mouldId }, data: { lifecycleState: toState, updatedBy: ctx.userId } });
+                await tx.mouldLifecycleEvent.create({
+                    data: {
+                        companyId: ctx.companyId,
+                        mouldId: repair.mouldId,
+                        eventType: status === 'ready' ? 'returned_to_rotation' : status === 'scrapped' ? 'retired' : 'moved_to_repair',
+                        fromState: mould.lifecycleState,
+                        toState,
+                        shotCountAtEvent: mould.shotCountAccumulated,
+                        triggeredBy: ctx.userId,
+                        triggerKind: 'manual',
+                        createdBy: ctx.userId,
+                    },
+                });
+            }
+            await audit_service_1.AuditService.write({
+                tx,
+                companyId: ctx.companyId,
+                entityType: 'repair_record',
+                entityId: repair.id,
+                action: 'state_transition',
+                actorUserId: ctx.userId,
+                actorRole: ctx.role,
+                before,
+                after: repair,
+            });
+            return repair;
         });
-        // If ready, put mould back to active
-        // If scrapped, put mould to retired
-        if (status === 'ready') {
-            await prisma_1.prisma.mould.update({ where: { id: repair.mouldId }, data: { lifecycleState: 'active' } });
-        }
-        else if (status === 'scrapped') {
-            await prisma_1.prisma.mould.update({ where: { id: repair.mouldId }, data: { lifecycleState: 'retired' } });
-        }
-        return repair;
     }
 };

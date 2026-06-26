@@ -24,6 +24,15 @@ router.post('/', (0, auth_middleware_1.authorize)('log.create'), auth_middleware
         return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
     }
 });
+router.patch('/:id', (0, auth_middleware_1.authorize)('log.edit'), auth_middleware_1.scopeVendor, async (req, res) => {
+    try {
+        const data = await daily_logging_service_1.DailyLoggingService.updateDraft(req.auth, req.params.id, req.body);
+        return (0, response_1.success)(res, data);
+    }
+    catch (err) {
+        return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
+    }
+});
 router.post('/:id/submit', (0, auth_middleware_1.authorize)('log.submit'), auth_middleware_1.scopeVendor, async (req, res) => {
     try {
         const idempotencyKey = req.headers['idempotency-key'];

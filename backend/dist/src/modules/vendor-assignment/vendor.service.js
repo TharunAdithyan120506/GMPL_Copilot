@@ -1,28 +1,59 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VendorService = void 0;
 const prisma_1 = require("../../shared/prisma");
 const errors_1 = require("../../shared/errors");
 const audit_service_1 = require("../../cross-cutting/audit/audit.service");
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 exports.VendorService = {
     async listVendors(ctx) {
-        return prisma_1.prisma.vendor.findMany({
+        const vendors = await prisma_1.prisma.vendor.findMany({
             where: { companyId: ctx.companyId, deletedAt: null },
+            include: { users: { where: { deletedAt: null }, select: { loginIdentifier: true }, take: 1 } },
             orderBy: { name: 'asc' },
         });
+        return vendors.map((vendor) => ({
+            ...vendor,
+            sharedLoginId: vendor.users[0]?.loginIdentifier ?? null,
+            users: undefined,
+        }));
     },
     async createVendor(ctx, data) {
         return prisma_1.prisma.$transaction(async (tx) => {
+            if (!data.code?.trim() || !data.name?.trim()) {
+                throw errors_1.Errors.validation([
+                    { field: 'code', issue: 'Required' },
+                    { field: 'name', issue: 'Required' },
+                ]);
+            }
             const vendor = await tx.vendor.create({
                 data: {
                     companyId: ctx.companyId,
-                    code: data.code,
-                    name: data.name,
+                    code: data.code.trim(),
+                    name: data.name.trim(),
                     isInternal: data.isInternal || false,
                     createdBy: ctx.userId,
                     updatedBy: ctx.userId,
                 },
             });
+            if (data.sharedLoginId?.trim()) {
+                const vendorRole = await tx.role.findFirst({ where: { companyId: ctx.companyId, key: 'vendor' } });
+                if (!vendorRole)
+                    throw errors_1.Errors.internal('Vendor role is not configured');
+                await tx.user.create({
+                    data: {
+                        companyId: ctx.companyId,
+                        roleId: vendorRole.id,
+                        vendorId: vendor.id,
+                        loginIdentifier: data.sharedLoginId.trim(),
+                        passwordHash: await bcryptjs_1.default.hash(data.initialPassword || 'password', 10),
+                        isActive: true,
+                    },
+                });
+            }
             await audit_service_1.AuditService.write({
                 companyId: ctx.companyId,
                 entityType: 'vendor',
@@ -45,6 +76,7 @@ exports.VendorService = {
         return prisma_1.prisma.assignment.findMany({
             where,
             include: {
+                vendor: { select: { id: true, code: true, name: true } },
                 mould: true,
                 rawMaterial: true,
             },
@@ -54,6 +86,32 @@ exports.VendorService = {
     async assign(ctx, data) {
         return prisma_1.prisma.$transaction(async (tx) => {
             try {
+                if (!Number.isFinite(Number(data.rmAssignedQty)) || Number(data.rmAssignedQty) <= 0) {
+                    throw errors_1.Errors.validation([{ field: 'rmAssignedQty', issue: 'Must be greater than zero' }]);
+                }
+                const [vendor, mould, rawMaterial] = await Promise.all([
+                    tx.vendor.findFirst({ where: { id: data.vendorId, companyId: ctx.companyId, isActive: true, deletedAt: null } }),
+                    tx.mould.findFirst({ where: { id: data.mouldId, companyId: ctx.companyId, deletedAt: null } }),
+                    tx.rawMaterial.findFirst({ where: { id: data.rawMaterialId, companyId: ctx.companyId, deletedAt: null } }),
+                ]);
+                if (!vendor)
+                    throw errors_1.Errors.notFound('Vendor');
+                if (!mould)
+                    throw errors_1.Errors.notFound('Mould');
+                if (!rawMaterial)
+                    throw errors_1.Errors.notFound('Raw material');
+                const existingActiveAssignment = await tx.assignment.findFirst({
+                    where: {
+                        companyId: ctx.companyId,
+                        mouldId: data.mouldId,
+                        status: 'active',
+                        deletedAt: null,
+                    },
+                    include: { vendor: { select: { code: true, name: true } } },
+                });
+                if (existingActiveAssignment) {
+                    throw errors_1.Errors.conflict(`Mould is already actively assigned to ${existingActiveAssignment.vendor.name} (${existingActiveAssignment.vendor.code})`);
+                }
                 const assignment = await tx.assignment.create({
                     data: {
                         companyId: ctx.companyId,

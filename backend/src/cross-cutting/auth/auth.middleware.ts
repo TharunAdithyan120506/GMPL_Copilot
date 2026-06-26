@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { AppError, Errors } from '../../shared/errors';
 import { AuthContext } from '../../shared/types';
 import { error } from '../../shared/response';
@@ -12,7 +13,7 @@ export function signToken(payload: AuthContext, expiresIn = '15m') {
 }
 
 export function signRefreshToken(userId: string) {
-  return jwt.sign({ sub: userId, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ sub: userId, type: 'refresh', jti: randomUUID() }, JWT_SECRET, { expiresIn: '7d' });
 }
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {

@@ -22,14 +22,13 @@ export function ProductionLogEntry() {
 
   useEffect(() => {
     if (!assignmentId) {
-      setError('No assignment selected. Please go to My Assignments and select one.');
+      setError('No mould selected. Please open My Moulds and choose Log Production for an assigned mould.');
       setLoading(false);
       return;
     }
 
     const fetchAssignment = async () => {
       try {
-        // We can fetch the specific assignment or just find it from /vendors/assignments
         const res = await api.get('/vendors/assignments');
         if (res.data && res.data.data) {
           const match = res.data.data.find((a: any) => a.id === assignmentId);

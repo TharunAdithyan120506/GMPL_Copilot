@@ -15,7 +15,8 @@ import { Copilot } from './pages/Copilot';
 import { Settings } from './pages/Settings';
 import { Support } from './pages/Support';
 import { Login } from './pages/Login';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/useAuth';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();

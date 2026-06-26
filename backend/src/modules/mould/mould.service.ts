@@ -2,7 +2,23 @@ import { prisma } from '../../shared/prisma';
 import { AuthContext, MouldLifecycleState } from '../../shared/types';
 import { Errors } from '../../shared/errors';
 import { AuditService } from '../../cross-cutting/audit/audit.service';
-import { NotificationService } from '../../cross-cutting/notifications/notification.service';
+
+function activeAssignmentInclude(ctx: AuthContext) {
+  return {
+    assignments: {
+      where: {
+        status: 'active',
+        deletedAt: null,
+        ...(ctx.role === 'vendor' ? { vendorId: ctx.vendorId } : {}),
+      },
+      include: {
+        vendor: { select: { id: true, code: true, name: true, isActive: true } },
+        rawMaterial: { select: { id: true, code: true, name: true, unit: true } },
+      },
+      orderBy: { assignedAt: 'desc' as const },
+    },
+  };
+}
 
 export const MouldService = {
   async list(ctx: AuthContext) {
@@ -13,6 +29,7 @@ export const MouldService = {
     }
     return prisma.mould.findMany({
       where,
+      include: activeAssignmentInclude(ctx),
       orderBy: { name: 'asc' },
     });
   },
@@ -22,7 +39,7 @@ export const MouldService = {
     if (ctx.role === 'vendor') {
       where.assignments = { some: { vendorId: ctx.vendorId, status: 'active' } };
     }
-    const mould = await prisma.mould.findUnique({ where });
+    const mould = await prisma.mould.findUnique({ where, include: activeAssignmentInclude(ctx) });
     if (!mould) throw Errors.notFound('Mould');
     return mould;
   },

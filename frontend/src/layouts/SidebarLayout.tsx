@@ -1,10 +1,9 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export function SidebarLayout() {
   const { user, logout } = useAuth();
-  
-  // MOCK LOGIC FOR LAYOUT
+
   const isCompany = user ? user.role === 'company' : true;
 
   return (
@@ -33,9 +32,9 @@ export function SidebarLayout() {
         
         {!isCompany && (
           <div className="px-4 mb-6">
-            <Link to="/logs/new" className="w-full neo-btn-primary py-2 text-sm flex items-center justify-center gap-2">
+            <Link to="/moulds" className="w-full neo-btn-primary py-2 text-sm flex items-center justify-center gap-2">
               <span className="material-symbols-outlined fill-icon text-[18px]">add</span>
-              New Production Log
+              Choose Mould to Log
             </Link>
           </div>
         )}
@@ -59,17 +58,8 @@ export function SidebarLayout() {
             ? "bg-primary-container text-on-primary-container border-2 border-on-background shadow-[4px_4px_0px_#1A1A1A] m-2 p-3 flex items-center gap-3 font-bold"
             : "text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background"}>
             <span className="material-symbols-outlined">precision_manufacturing</span>
-            <span className="font-label-sm text-label-sm">Moulds</span>
+            <span className="font-label-sm text-label-sm">{isCompany ? 'Moulds' : 'My Moulds'}</span>
           </NavLink>
-          
-          {!isCompany && (
-            <NavLink to="/assignments" className={({isActive}) => isActive 
-              ? "bg-primary-container text-on-primary-container border-2 border-on-background shadow-[4px_4px_0px_#1A1A1A] m-2 p-3 flex items-center gap-3 font-bold"
-              : "text-on-surface-variant hover:bg-surface-container-highest p-3 mx-2 my-1 flex items-center gap-3 transition-all border-2 border-transparent hover:border-on-background"}>
-              <span className="material-symbols-outlined">assignment</span>
-              <span className="font-label-sm text-label-sm">My Assignments</span>
-            </NavLink>
-          )}
 
           {isCompany && (
             <NavLink to="/materials" className={({isActive}) => isActive 

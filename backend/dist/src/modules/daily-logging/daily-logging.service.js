@@ -23,14 +23,29 @@ exports.DailyLoggingService = {
     async createDraft(ctx, data) {
         if (ctx.role !== 'vendor')
             throw errors_1.Errors.forbidden('Only vendors can log production');
+        assertNonNegative('acceptedQty', Number(data.acceptedQty ?? 0));
+        assertNonNegative('rejectedQty', Number(data.rejectedQty ?? 0));
+        assertNonNegative('dispatchedQty', Number(data.dispatchedQty ?? 0));
+        assertNonNegative('downtimeMinutes', Number(data.downtimeMinutes ?? 0));
         return prisma_1.prisma.$transaction(async (tx) => {
             try {
+                const assignment = await tx.assignment.findFirst({
+                    where: {
+                        id: data.assignmentId,
+                        companyId: ctx.companyId,
+                        vendorId: ctx.vendorId,
+                        status: 'active',
+                        deletedAt: null,
+                    },
+                });
+                if (!assignment)
+                    throw errors_1.Errors.notFound('Active assignment');
                 const log = await tx.dailyProductionLog.create({
                     data: {
                         companyId: ctx.companyId,
                         vendorId: ctx.vendorId,
-                        assignmentId: data.assignmentId,
-                        mouldId: data.mouldId,
+                        assignmentId: assignment.id,
+                        mouldId: assignment.mouldId,
                         logDate: new Date(data.logDate),
                         shotsRun: data.shotsRun,
                         acceptedQty: data.acceptedQty,
@@ -65,12 +80,54 @@ exports.DailyLoggingService = {
             }
         });
     },
+    async updateDraft(ctx, id, data) {
+        if (ctx.role !== 'vendor')
+            throw errors_1.Errors.forbidden('Only vendors can update logs');
+        assertNonNegative('acceptedQty', Number(data.acceptedQty ?? 0));
+        assertNonNegative('rejectedQty', Number(data.rejectedQty ?? 0));
+        assertNonNegative('dispatchedQty', Number(data.dispatchedQty ?? 0));
+        assertNonNegative('downtimeMinutes', Number(data.downtimeMinutes ?? 0));
+        return prisma_1.prisma.$transaction(async (tx) => {
+            const before = await tx.dailyProductionLog.findFirst({
+                where: { id, companyId: ctx.companyId, vendorId: ctx.vendorId, deletedAt: null },
+            });
+            if (!before)
+                throw errors_1.Errors.notFound('Log');
+            if (before.status !== 'draft')
+                throw errors_1.Errors.stateTransition('Only draft logs can be edited');
+            const updated = await tx.dailyProductionLog.update({
+                where: { id },
+                data: {
+                    acceptedQty: data.acceptedQty,
+                    rejectedQty: data.rejectedQty,
+                    dispatchedQty: data.dispatchedQty,
+                    downtimeReason: data.downtimeReason || null,
+                    downtimeMinutes: data.downtimeMinutes || null,
+                    updatedBy: ctx.userId,
+                },
+            });
+            await audit_service_1.AuditService.write({
+                companyId: ctx.companyId,
+                entityType: 'daily_production_log',
+                entityId: id,
+                action: 'update',
+                actorUserId: ctx.userId,
+                actorRole: ctx.role,
+                before,
+                after: updated,
+                tx,
+            });
+            return updated;
+        });
+    },
     async submit(ctx, id, idempotencyKey) {
         if (ctx.role !== 'vendor')
             throw errors_1.Errors.forbidden('Only vendors can submit logs');
         // Basic idempotent lock check (using jobs table or a separate lock mechanism)
         // For V1, we check if the log is already submitted.
-        const current = await prisma_1.prisma.dailyProductionLog.findUnique({ where: { id, companyId: ctx.companyId } });
+        const current = await prisma_1.prisma.dailyProductionLog.findFirst({
+            where: { id, companyId: ctx.companyId, vendorId: ctx.vendorId, deletedAt: null },
+        });
         if (!current)
             throw errors_1.Errors.notFound('Log');
         if (current.status !== 'draft')
@@ -80,8 +137,10 @@ exports.DailyLoggingService = {
             const [log] = await tx.$queryRaw `SELECT * FROM daily_production_logs WHERE id = ${id}::uuid FOR UPDATE`;
             if (!log)
                 throw errors_1.Errors.notFound('Log');
-            const assignment = await tx.assignment.findUnique({ where: { id: log.assignment_id } });
-            const mould = await tx.mould.findUnique({ where: { id: log.mould_id } });
+            const assignment = await tx.assignment.findFirst({
+                where: { id: log.assignment_id, companyId: ctx.companyId, vendorId: ctx.vendorId, status: 'active', deletedAt: null },
+            });
+            const mould = await tx.mould.findFirst({ where: { id: log.mould_id, companyId: ctx.companyId, deletedAt: null } });
             if (!assignment || !mould)
                 throw errors_1.Errors.internal('Data integrity error');
             // 2. System calculates Total Parts and Shots Run
@@ -141,7 +200,7 @@ exports.DailyLoggingService = {
                         createdBy: ctx.userId || '',
                     }
                 });
-                await notification_service_1.NotificationService.enqueue(ctx.companyId, 'MOULD_LIFE_WARNING', { mouldId: mould.id, mouldName: mould.name });
+                await notification_service_1.NotificationService.enqueue(ctx.companyId, 'MOULD_LIFE_WARNING', { mouldId: mould.id, mouldName: mould.name }, tx);
             }
             // 8. Audit log
             await audit_service_1.AuditService.write({
@@ -159,3 +218,8 @@ exports.DailyLoggingService = {
         });
     }
 };
+function assertNonNegative(field, value) {
+    if (!Number.isFinite(value) || value < 0) {
+        throw errors_1.Errors.validation([{ field, issue: 'Must be a non-negative number' }]);
+    }
+}

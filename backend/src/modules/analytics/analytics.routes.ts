@@ -42,4 +42,13 @@ router.get('/mould-life', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/downtime', async (req: Request, res: Response) => {
+  try {
+    const data = await AnalyticsService.getDowntime((req as any).auth);
+    return success(res, data);
+  } catch (err: any) {
+    return error(res, err.code || 'INTERNAL', err.message, err.status || 500);
+  }
+});
+
 export default router;

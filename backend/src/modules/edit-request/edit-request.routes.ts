@@ -6,7 +6,7 @@ import { success, error } from '../../shared/response';
 const router = Router();
 router.use(authenticate);
 
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authorize('log.view'), scopeVendor, async (req: Request, res: Response) => {
   try {
     const data = await EditRequestService.list((req as any).auth, req.query);
     return success(res, data);
@@ -15,7 +15,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', authorize('log.edit'), scopeVendor, async (req: Request, res: Response) => {
   try {
     const data = await EditRequestService.create((req as any).auth, req.body);
     return success(res, data, 201);
@@ -24,7 +24,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/:id/decide', async (req: Request, res: Response) => {
+router.post('/:id/decide', authorize('log.approve_edit'), async (req: Request, res: Response) => {
   try {
     const data = await EditRequestService.decide((req as any).auth, req.params.id as string, req.body);
     return success(res, data);

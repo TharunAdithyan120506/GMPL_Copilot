@@ -31,7 +31,7 @@ exports.EditRequestService = {
         });
         if (!log)
             throw errors_1.Errors.notFound('Production log not found');
-        if (log.status !== 'submitted' && log.status !== 'locked') {
+        if (!['submitted', 'corrected'].includes(log.status)) {
             throw errors_1.Errors.stateTransition('Can only edit submitted logs');
         }
         return prisma_1.prisma.$transaction(async (tx) => {
@@ -60,7 +60,7 @@ exports.EditRequestService = {
                 editRequestId: req.id,
                 vendorId: ctx.vendorId,
                 logId: log.id
-            });
+            }, tx);
             return req;
         });
     },
@@ -87,22 +87,67 @@ exports.EditRequestService = {
                     updatedBy: ctx.userId
                 }
             });
-            // If approved, we need to update the actual daily production log
             if (data.status === 'approved') {
                 const changes = req.requestedChanges;
-                // This is a simplified application of changes. In a real scenario, changing log qtys
-                // requires recalculating RM consumed, shot counts on moulds, and assignment RM balances.
-                // For the sake of MVP, we will just update the log's fields.
+                const nextAcceptedQty = Number(changes.acceptedQty ?? req.dailyProductionLog.acceptedQty);
+                const nextRejectedQty = Number(changes.rejectedQty ?? req.dailyProductionLog.rejectedQty);
+                const nextDispatchedQty = Number(changes.dispatchedQty ?? req.dailyProductionLog.dispatchedQty);
+                validateQuantity('acceptedQty', nextAcceptedQty);
+                validateQuantity('rejectedQty', nextRejectedQty);
+                validateQuantity('dispatchedQty', nextDispatchedQty);
+                const mould = await tx.mould.findFirst({
+                    where: { id: req.dailyProductionLog.mouldId, companyId: ctx.companyId, deletedAt: null },
+                });
+                if (!mould)
+                    throw errors_1.Errors.notFound('Mould');
+                const totalParts = nextAcceptedQty + nextRejectedQty;
+                if (totalParts % mould.cavityCount !== 0) {
+                    throw errors_1.Errors.validation([
+                        {
+                            field: 'requestedChanges',
+                            issue: `Accepted + rejected quantity (${totalParts}) must be divisible by cavity count (${mould.cavityCount})`,
+                        },
+                    ]);
+                }
+                const nextShotsRun = totalParts / mould.cavityCount;
+                const shotWeightG = Number(req.dailyProductionLog.shotWeightGSnapshot || mould.shotWeightG);
+                const nextRmConsumedQty = (nextShotsRun * shotWeightG) / 1000;
+                const nextRmLossQty = nextRmConsumedQty * 0.01;
+                const previousShotsRun = Number(req.dailyProductionLog.shotsRun);
+                const previousRmConsumedQty = Number(req.dailyProductionLog.rmConsumedQty);
+                const previousRmLossQty = Number(req.dailyProductionLog.rmIrrecoverableLossQty);
+                const shotsDelta = nextShotsRun - previousShotsRun;
+                const consumedDelta = nextRmConsumedQty - previousRmConsumedQty;
+                const lossDelta = nextRmLossQty - previousRmLossQty;
                 await tx.dailyProductionLog.update({
                     where: { id: req.dailyProductionLogId },
                     data: {
-                        ...changes,
+                        acceptedQty: nextAcceptedQty,
+                        rejectedQty: nextRejectedQty,
+                        dispatchedQty: nextDispatchedQty,
+                        shotsRun: nextShotsRun,
+                        rmConsumedQty: nextRmConsumedQty,
+                        rmIrrecoverableLossQty: nextRmLossQty,
                         updatedBy: ctx.userId,
-                        status: 'edited'
+                        status: 'corrected'
                     }
                 });
-                // Here we ideally recalculate (Original - New) diffs and apply them to `Mould` and `Assignment`.
-                // TODO: Full transactional rollback and replay for calculations.
+                await tx.assignment.update({
+                    where: { id: req.dailyProductionLog.assignmentId },
+                    data: {
+                        rmConsumedQty: { increment: consumedDelta },
+                        rmIrrecoverableLossQty: { increment: lossDelta },
+                        rmRemainingQty: { decrement: consumedDelta + lossDelta },
+                        updatedBy: ctx.userId,
+                    },
+                });
+                await tx.mould.update({
+                    where: { id: req.dailyProductionLog.mouldId },
+                    data: {
+                        shotCountAccumulated: { increment: shotsDelta },
+                        updatedBy: ctx.userId,
+                    },
+                });
             }
             await audit_service_1.AuditService.write({
                 tx,
@@ -119,8 +164,13 @@ exports.EditRequestService = {
                 editRequestId: req.id,
                 vendorId: req.vendorId,
                 status: data.status
-            });
+            }, tx);
             return updatedReq;
         });
     }
 };
+function validateQuantity(field, value) {
+    if (!Number.isFinite(value) || value < 0) {
+        throw errors_1.Errors.validation([{ field, issue: 'Must be a non-negative number' }]);
+    }
+}

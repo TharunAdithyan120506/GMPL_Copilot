@@ -1,39 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../utils/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchMetrics = useCallback(async () => {
     if (user?.role !== 'company') {
       setLoading(false);
       return;
     }
 
-    const fetchMetrics = async () => {
-      try {
-        const res = await api.get('/analytics/dashboard');
-        if (res.data && res.data.data) {
-          setData(res.data.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch dashboard metrics:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMetrics();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.get('/analytics/dashboard');
+      setData(res.data?.data || null);
+    } catch (err: any) {
+      setData(null);
+      const status = err.response?.status;
+      const message = err.response?.data?.error?.message || 'Failed to fetch dashboard metrics.';
+      setError(status === 401 ? 'Session expired. Please log in again to fetch dashboard metrics.' : message);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics]);
 
   if (user?.role !== 'company') {
     return (
       <div className="p-margin font-body-lg text-center flex flex-col justify-center items-center h-[50vh]">
         <span className="material-symbols-outlined text-[64px] text-secondary mb-4">factory</span>
         <h2 className="font-headline-lg">Welcome to Vendor Portal</h2>
-        <p className="text-secondary mt-2">Check 'My Assignments' to log today's production.</p>
+        <p className="text-secondary mt-2">Open My Moulds to inspect assigned moulds and log today's production.</p>
       </div>
     );
   }
@@ -42,9 +47,55 @@ export function Dashboard() {
     return <div className="p-margin font-body-md">Loading Company Overview...</div>;
   }
 
+  if (error) {
+    return (
+      <div className="p-margin flex flex-col gap-4">
+        <div className="bg-error-container border-2 border-on-background neo-shadow p-6 max-w-2xl">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-danger">cloud_off</span>
+            <div>
+              <h2 className="font-headline-md text-headline-md text-danger">Dashboard Fetch Failed</h2>
+              <p className="font-body-md text-body-md mt-2">{error}</p>
+            </div>
+          </div>
+        </div>
+        <button onClick={fetchMetrics} className="w-fit neo-btn-primary px-6 py-3 flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">refresh</span>
+          Retry Fetch
+        </button>
+      </div>
+    );
+  }
+
   const kpis = data?.kpis || { activeMoulds: 0, pendingEdits: 0, lowRmStock: 0, nearLimitMoulds: 0 };
   const vendorScores = data?.vendorScores || [];
   const downtime = data?.downtime || { totalHours: 0, machine: 0, mould: 0, manpower: 0, other: 0 };
+  const productionSeries = data?.productionSeries || [];
+  const previousWeekTotal = productionSeries.slice(0, 7).reduce((sum: number, point: any) => sum + Number(point.total || 0), 0);
+  const currentWeekTotal = productionSeries.slice(7).reduce((sum: number, point: any) => sum + Number(point.total || 0), 0);
+  const productionSeriesTotal = previousWeekTotal + currentWeekTotal;
+  const productionDelta = currentWeekTotal - previousWeekTotal;
+  const maxProduction = Math.max(...productionSeries.map((point: any) => Number(point.total || 0)), 1);
+  const nearLimitPercent = kpis.activeMoulds > 0 ? Math.min(100, Math.round((kpis.nearLimitMoulds / kpis.activeMoulds) * 100)) : 0;
+  const exportDashboard = () => {
+    const rows = [
+      ['date', 'accepted', 'rejected', 'total'],
+      ...productionSeries.map((point: any) => [
+        point.date,
+        Number(point.accepted || 0),
+        Number(point.rejected || 0),
+        Number(point.total || 0),
+      ]),
+    ];
+    const csv = rows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `dashboard-production-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="p-margin flex flex-col gap-margin relative overflow-y-auto">
@@ -54,15 +105,10 @@ export function Dashboard() {
           <h2 className="font-display-lg text-[48px] font-bold leading-[1.1] text-on-background mb-2 tracking-[-0.02em]">Company Overview</h2>
           <p className="font-body-lg text-[18px] text-on-surface-variant">GMPL Copilot / Real-time Enterprise Metrics</p>
         </div>
-        <div className="flex gap-4">
-          <button className="border-2 border-on-background p-3 flex items-center justify-center bg-surface-container-low neo-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all">
-            <span className="material-symbols-outlined">search</span>
-          </button>
-          <button className="border-2 border-on-background p-3 flex items-center justify-center bg-surface-container-low neo-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all relative">
-            <span className="material-symbols-outlined">notifications</span>
-            <span className="absolute top-2 right-2 w-3 h-3 bg-danger border-2 border-on-background rounded-full"></span>
-          </button>
-        </div>
+        <button onClick={fetchMetrics} className="border-2 border-on-background px-4 py-3 flex items-center justify-center gap-2 bg-surface-container-low neo-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all font-label-sm text-label-sm uppercase">
+          <span className="material-symbols-outlined text-[18px]">refresh</span>
+          Refresh
+        </button>
       </header>
 
       {/* Bento Grid Layout */}
@@ -75,9 +121,9 @@ export function Dashboard() {
             <span className="material-symbols-outlined text-primary fill-icon">precision_manufacturing</span>
           </div>
           <div className="font-data-lg text-[48px] leading-none text-on-background font-bold">{kpis.activeMoulds}</div>
-          <div className="mt-4 flex items-center gap-2 text-success font-label-sm text-label-sm">
-            <span className="material-symbols-outlined text-[16px]">trending_up</span>
-            <span>+4 this week</span>
+          <div className={`mt-4 flex items-center gap-2 font-label-sm text-label-sm ${productionDelta >= 0 ? 'text-success' : 'text-danger'}`}>
+            <span className="material-symbols-outlined text-[16px]">{productionDelta >= 0 ? 'trending_up' : 'trending_down'}</span>
+            <span>{productionDelta >= 0 ? '+' : ''}{productionDelta.toLocaleString()} units vs prior week</span>
           </div>
         </div>
         
@@ -111,9 +157,9 @@ export function Dashboard() {
           <div className="font-data-lg text-[48px] leading-none text-on-background font-bold">{kpis.nearLimitMoulds}</div>
           <div className="mt-4 flex flex-col gap-2">
             <div className="w-full h-4 border-2 border-on-background bg-surface">
-              <div className="h-full bg-warning border-r-2 border-on-background" style={{ width: '92%' }}></div>
+              <div className="h-full bg-warning border-r-2 border-on-background" style={{ width: `${nearLimitPercent}%` }}></div>
             </div>
-            <span className="font-label-sm text-label-sm text-on-surface-variant">&gt; 90% Shot Life</span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant">{nearLimitPercent}% of active moulds over 90% shot life</span>
           </div>
         </div>
 
@@ -122,41 +168,48 @@ export function Dashboard() {
           <div className="flex justify-between items-center mb-6 border-b-2 border-on-background pb-4">
             <div>
               <h3 className="font-headline-md text-headline-md">Production Across All Vendors</h3>
-              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase mt-1">Last 30 Days (Units in 1000s)</p>
+              <p className="font-label-sm text-label-sm text-on-surface-variant uppercase mt-1">Last 14 days from submitted logs</p>
             </div>
-            <button className="border-2 border-on-background p-2 py-1 text-label-sm font-label-sm flex items-center gap-2 neo-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all bg-surface-variant">
+            <button onClick={exportDashboard} className="border-2 border-on-background p-2 py-1 text-label-sm font-label-sm flex items-center gap-2 neo-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all bg-surface-variant">
               Export <span className="material-symbols-outlined text-[16px]">download</span>
             </button>
           </div>
           
-          {/* SVG Chart Mockup for Industrial Vibe */}
           <div className="flex-1 w-full relative bg-[#f8f3e9] border-2 border-on-background p-4 flex items-end">
+            {productionSeriesTotal === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="bg-surface border-2 border-on-background px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm">
+                  No submitted production logs in the last 14 days
+                </div>
+              </div>
+            )}
             <div className="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none opacity-20">
               <div className="border-b-2 border-on-background w-full h-0"></div>
               <div className="border-b-2 border-on-background w-full h-0"></div>
               <div className="border-b-2 border-on-background w-full h-0"></div>
               <div className="border-b-2 border-on-background w-full h-0"></div>
             </div>
-            <div className="w-full h-[80%] flex items-end justify-between gap-1 relative z-10 px-4">
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[30%] relative group"></div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[45%] relative group"></div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[40%] relative group"></div>
-              <div className="w-8 bg-primary-container border-2 border-on-background h-[60%] relative group shadow-[4px_0px_0px_#1A1A1A]"></div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[55%] relative group"></div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[70%] relative group"></div>
-              <div className="w-8 bg-primary-container border-2 border-on-background h-[85%] relative group shadow-[4px_0px_0px_#1A1A1A]"></div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[65%] relative group"></div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[50%] relative group"></div>
-              <div className="w-8 bg-danger border-2 border-on-background h-[20%] relative group">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-surface border-2 border-on-background rounded-full z-20 flex items-center justify-center">
-                  <div className="w-1 h-1 bg-danger rounded-full"></div>
-                </div>
-              </div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[40%] relative group"></div>
-              <div className="w-8 bg-surface-dim border-2 border-on-background h-[75%] relative group"></div>
-              <div className="w-8 bg-primary-container border-2 border-on-background h-[90%] relative group shadow-[4px_0px_0px_#1A1A1A]">
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-background text-surface font-data-md text-data-md px-2 hidden group-hover:block whitespace-nowrap z-20">90k</div>
-              </div>
+            <div className="w-full h-[80%] flex items-end justify-between gap-2 relative z-10 px-4">
+              {productionSeries.map((point: any) => {
+                const total = Number(point.total || 0);
+                const rejected = Number(point.rejected || 0);
+                const height = Math.max(4, Math.round((total / maxProduction) * 100));
+                const rejectedRate = total > 0 ? rejected / total : 0;
+
+                return (
+                  <div key={point.date} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end gap-2 group">
+                    <div
+                      className={`w-full max-w-10 border-2 border-on-background relative ${rejectedRate > 0.1 ? 'bg-danger' : total > 0 ? 'bg-primary-container' : 'bg-surface-dim'}`}
+                      style={{ height: `${height}%` }}
+                    >
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-background text-surface font-data-md text-data-md px-2 hidden group-hover:block whitespace-nowrap z-20">
+                        {total.toLocaleString()}
+                      </div>
+                    </div>
+                    <span className="font-label-sm text-[10px] text-on-surface-variant">{point.date.slice(5)}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

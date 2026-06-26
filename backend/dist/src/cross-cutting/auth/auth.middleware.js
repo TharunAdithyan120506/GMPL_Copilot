@@ -9,13 +9,14 @@ exports.authenticate = authenticate;
 exports.authorize = authorize;
 exports.scopeVendor = scopeVendor;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = require("crypto");
 const response_1 = require("../../shared/response");
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
 function signToken(payload, expiresIn = '15m') {
     return jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: expiresIn });
 }
 function signRefreshToken(userId) {
-    return jsonwebtoken_1.default.sign({ sub: userId, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    return jsonwebtoken_1.default.sign({ sub: userId, type: 'refresh', jti: (0, crypto_1.randomUUID)() }, JWT_SECRET, { expiresIn: '7d' });
 }
 function authenticate(req, res, next) {
     const header = req.headers.authorization;

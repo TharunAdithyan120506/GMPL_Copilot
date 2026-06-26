@@ -6,6 +6,8 @@ interface RawMaterial {
   code: string;
   name: string;
   unit: string;
+  allocatedQty?: number;
+  availableQty?: number;
 }
 
 export function Materials() {
@@ -13,6 +15,7 @@ export function Materials() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ code: '', name: '', unit: 'kg' });
+  const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [search, setSearch] = useState('');
 
   const fetchMaterials = async () => {
@@ -32,16 +35,36 @@ export function Materials() {
     fetchMaterials();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingMaterial(null);
+    setFormData({ code: '', name: '', unit: 'kg' });
+    setShowModal(true);
+  };
+
+  const openEditModal = (material: RawMaterial) => {
+    setEditingMaterial(material);
+    setFormData({ code: material.code, name: material.name, unit: material.unit });
+    setShowModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/raw-materials', formData);
+      if (editingMaterial) {
+        await api.patch(`/raw-materials/${editingMaterial.id}`, {
+          name: formData.name,
+          unit: formData.unit,
+        });
+      } else {
+        await api.post('/raw-materials', formData);
+      }
       setShowModal(false);
+      setEditingMaterial(null);
       setFormData({ code: '', name: '', unit: 'kg' });
       fetchMaterials();
     } catch (err) {
-      console.error('Failed to create material', err);
-      alert('Error creating material. Code might already exist.');
+      console.error('Failed to save material', err);
+      alert('Error saving material. Code might already exist.');
     }
   };
 
@@ -69,7 +92,7 @@ export function Materials() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <button onClick={() => setShowModal(true)} className="bg-primary-container text-on-primary-container font-headline-md text-[18px] py-3 px-8 border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_#1A1A1A] active:translate-x-[4px] active:translate-y-[4px] active:shadow-[2px_2px_0px_#1A1A1A] transition-all flex items-center justify-center gap-2 uppercase whitespace-nowrap">
+          <button onClick={openCreateModal} className="bg-primary-container text-on-primary-container font-headline-md text-[18px] py-3 px-8 border-2 border-on-background shadow-[6px_6px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_#1A1A1A] active:translate-x-[4px] active:translate-y-[4px] active:shadow-[2px_2px_0px_#1A1A1A] transition-all flex items-center justify-center gap-2 uppercase whitespace-nowrap">
             <span className="material-symbols-outlined fill-icon">add_box</span>
             New Material
           </button>
@@ -98,10 +121,10 @@ export function Materials() {
                     <div className="text-secondary text-sm">{mat.name}</div>
                   </td>
                   <td className="p-4 font-data-md text-data-md text-right">
-                    --
+                    {Number(mat.availableQty || 0).toLocaleString()}
                   </td>
                   <td className="p-4 font-data-md text-data-md text-right text-secondary">
-                    --
+                    {Number(mat.allocatedQty || 0).toLocaleString()}
                   </td>
                   <td className="p-4">
                     <span className="border-2 border-on-background bg-surface-variant px-2 py-1 font-label-sm text-label-sm uppercase">
@@ -109,7 +132,7 @@ export function Materials() {
                     </span>
                   </td>
                   <td className="p-4 text-center">
-                    <button className="bg-surface-variant text-on-background border-2 border-on-background px-3 py-1 neo-shadow-sm font-label-sm text-label-sm uppercase hover:neo-active">
+                    <button onClick={() => openEditModal(mat)} className="bg-surface-variant text-on-background border-2 border-on-background px-3 py-1 neo-shadow-sm font-label-sm text-label-sm uppercase hover:neo-active">
                       Edit
                     </button>
                   </td>
@@ -130,8 +153,10 @@ export function Materials() {
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
-            <h2 className="font-display-lg text-[24px] uppercase border-b-2 border-on-background pb-2 mb-6">New Raw Material</h2>
-            <form onSubmit={handleCreate} className="flex flex-col gap-4">
+            <h2 className="font-display-lg text-[24px] uppercase border-b-2 border-on-background pb-2 mb-6">
+              {editingMaterial ? 'Edit Raw Material' : 'New Raw Material'}
+            </h2>
+            <form onSubmit={handleSave} className="flex flex-col gap-4">
               <div>
                 <label className="font-label-sm uppercase text-secondary block mb-1">Code</label>
                 <input 
@@ -139,6 +164,7 @@ export function Materials() {
                   type="text" 
                   value={formData.code}
                   onChange={e => setFormData(prev => ({...prev, code: e.target.value}))}
+                  disabled={!!editingMaterial}
                   className="w-full bg-surface-container-low border-2 border-on-background p-3 focus:outline-none focus:shadow-[4px_4px_0px_#1A1A1A]" 
                 />
               </div>
@@ -163,7 +189,7 @@ export function Materials() {
                 />
               </div>
               <button type="submit" className="mt-4 bg-primary text-on-primary border-2 border-on-background p-3 uppercase font-bold neo-shadow-sm hover:neo-active">
-                Create Material
+                {editingMaterial ? 'Save Material' : 'Create Material'}
               </button>
             </form>
           </div>

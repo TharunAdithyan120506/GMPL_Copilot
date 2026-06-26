@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 
 export function Repairs() {
   const [repairs, setRepairs] = useState<any[]>([]);
-  // const [loading, setLoading] = useState(true);
+  const [moulds, setMoulds] = useState<any[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({ mouldId: '', issueDescription: '' });
+  const [saving, setSaving] = useState(false);
   const { user } = useAuth();
   const isCompany = user?.role === 'company';
 
@@ -15,7 +18,7 @@ export function Repairs() {
         setRepairs(res.data.data.map((r: any) => ({
           ...r,
           mouldCode: r.mould?.code || r.mouldId.substring(0,8),
-          vendorName: 'Repair Center', // Wait, repairs don't explicitly belong to a vendor?
+          vendorName: 'Repair Center',
           days: Math.floor((new Date().getTime() - new Date(r.openedAt).getTime()) / (1000 * 3600 * 24)),
           issue: r.issueDescription
         })));
@@ -23,15 +26,47 @@ export function Repairs() {
     } catch (err) {
       console.error('Failed to fetch repairs', err);
     } finally {
-      // setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchRepairs();
+    const fetchMoulds = async () => {
+      try {
+        const res = await api.get('/moulds');
+        if (res.data?.data) setMoulds(res.data.data);
+      } catch (err) {
+        console.error('Failed to fetch moulds', err);
+      }
+    };
+    fetchMoulds();
   }, []);
 
   const getStatusColumn = (status: string) => repairs.filter(r => r.status === status);
+
+  const handleCreateRepair = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/repairs', formData);
+      setShowModal(false);
+      setFormData({ mouldId: '', issueDescription: '' });
+      await fetchRepairs();
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to create repair record.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      await api.patch(`/repairs/${id}/status`, { status });
+      await fetchRepairs();
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to update repair status.');
+    }
+  };
 
   return (
     <div className="flex-grow p-margin flex flex-col gap-gutter min-w-0">
@@ -41,7 +76,7 @@ export function Repairs() {
           <p className="font-body-md text-body-md text-secondary mt-2">Manage mould maintenance lifecycle and vendor repairs.</p>
         </div>
         {isCompany && (
-          <button className="bg-deep-orange text-white border-2 border-on-background neo-shadow font-headline-md text-headline-md uppercase py-4 px-6 hover:bg-primary transition-colors flex items-center gap-3">
+          <button onClick={() => setShowModal(true)} className="bg-deep-orange text-white border-2 border-on-background neo-shadow font-headline-md text-headline-md uppercase py-4 px-6 hover:bg-primary transition-colors flex items-center gap-3">
             <span className="material-symbols-outlined font-bold text-[28px]">build_circle</span>
             Move to Repair
           </button>
@@ -78,6 +113,11 @@ export function Repairs() {
                     <span className="material-symbols-outlined text-warning text-[18px]">schedule</span>
                     <span className="font-body-md text-body-md font-bold text-warning">{r.days} Days in Transit</span>
                   </div>
+                  {isCompany && (
+                    <button onClick={() => updateStatus(r.id, 'repair')} className="w-full mt-4 bg-info text-white border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm uppercase py-2 hover:neo-active">
+                      Start Repair
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
@@ -116,6 +156,16 @@ export function Repairs() {
                     <span className="font-label-sm text-label-sm text-secondary uppercase block mb-1">Issue:</span>
                     <p className="font-data-md text-data-md text-on-background line-clamp-2">{r.issue}</p>
                   </div>
+                  {isCompany && (
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                      <button onClick={() => updateStatus(r.id, 'ready')} className="bg-success text-on-primary border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm uppercase py-2 hover:neo-active">
+                        Mark Ready
+                      </button>
+                      <button onClick={() => updateStatus(r.id, 'scrapped')} className="bg-surface text-danger border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm uppercase py-2 hover:neo-active">
+                        Scrap
+                      </button>
+                    </div>
+                  )}
                 </div>
               </article>
             ))}
@@ -151,8 +201,8 @@ export function Repairs() {
                     <span className="font-body-md text-body-md font-bold text-success">Ready for Pickup</span>
                   </div>
                   {isCompany && (
-                    <button className="w-full mt-4 bg-surface text-on-background border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm uppercase py-2 hover:bg-surface-variant transition-colors">
-                      Dispatch Truck
+                    <button onClick={() => updateStatus(r.id, 'repair')} className="w-full mt-4 bg-surface text-on-background border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm uppercase py-2 hover:bg-surface-variant transition-colors">
+                      Reopen Repair
                     </button>
                   )}
                 </div>
@@ -190,6 +240,46 @@ export function Repairs() {
           </div>
         </section>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-surface border-4 border-on-background shadow-[8px_8px_0px_#1A1A1A] w-full max-w-xl p-6 relative">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-on-background bg-error-container text-danger hover:bg-danger hover:text-on-error transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h2 className="font-display-lg text-[24px] uppercase border-b-2 border-on-background pb-2 mb-6">Move Mould to Repair</h2>
+            <form onSubmit={handleCreateRepair} className="flex flex-col gap-4">
+              <div>
+                <label className="font-label-sm uppercase text-secondary block mb-1">Mould</label>
+                <select
+                  required
+                  value={formData.mouldId}
+                  onChange={e => setFormData(p => ({ ...p, mouldId: e.target.value }))}
+                  className="w-full bg-surface-container-low border-2 border-on-background p-3 focus:outline-none"
+                >
+                  <option value="">Select a mould...</option>
+                  {moulds.map(m => <option key={m.id} value={m.id}>{m.code} - {m.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="font-label-sm uppercase text-secondary block mb-1">Issue Description</label>
+                <textarea
+                  required
+                  value={formData.issueDescription}
+                  onChange={e => setFormData(p => ({ ...p, issueDescription: e.target.value }))}
+                  className="w-full min-h-28 bg-surface-container-low border-2 border-on-background p-3 focus:outline-none"
+                />
+              </div>
+              <button disabled={saving} type="submit" className="mt-4 bg-primary text-on-primary border-2 border-on-background p-3 uppercase font-bold neo-shadow-sm hover:neo-active disabled:opacity-50">
+                {saving ? 'Creating...' : 'Create Repair Record'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

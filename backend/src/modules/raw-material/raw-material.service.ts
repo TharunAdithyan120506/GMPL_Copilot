@@ -5,9 +5,32 @@ import { AuditService } from '../../cross-cutting/audit/audit.service';
 
 export const RawMaterialService = {
   async list(ctx: AuthContext) {
-    return prisma.rawMaterial.findMany({
+    const materials = await prisma.rawMaterial.findMany({
       where: { companyId: ctx.companyId, deletedAt: null },
       orderBy: { name: 'asc' },
+    });
+
+    const balances = await prisma.assignment.groupBy({
+      by: ['rawMaterialId'],
+      where: { companyId: ctx.companyId, deletedAt: null },
+      _sum: {
+        rmAssignedQty: true,
+        rmConsumedQty: true,
+        rmIrrecoverableLossQty: true,
+        rmRemainingQty: true,
+      },
+    });
+
+    const balanceByMaterial = new Map(balances.map((b) => [b.rawMaterialId, b._sum]));
+    return materials.map((material) => {
+      const balance = balanceByMaterial.get(material.id);
+      return {
+        ...material,
+        allocatedQty: Number(balance?.rmAssignedQty ?? 0),
+        consumedQty: Number(balance?.rmConsumedQty ?? 0),
+        lossQty: Number(balance?.rmIrrecoverableLossQty ?? 0),
+        availableQty: Number(balance?.rmRemainingQty ?? 0),
+      };
     });
   },
 

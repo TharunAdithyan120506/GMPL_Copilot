@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import api from '../utils/api';
 
 interface Message {

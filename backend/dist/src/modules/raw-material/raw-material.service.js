@@ -6,9 +6,30 @@ const errors_1 = require("../../shared/errors");
 const audit_service_1 = require("../../cross-cutting/audit/audit.service");
 exports.RawMaterialService = {
     async list(ctx) {
-        return prisma_1.prisma.rawMaterial.findMany({
+        const materials = await prisma_1.prisma.rawMaterial.findMany({
             where: { companyId: ctx.companyId, deletedAt: null },
             orderBy: { name: 'asc' },
+        });
+        const balances = await prisma_1.prisma.assignment.groupBy({
+            by: ['rawMaterialId'],
+            where: { companyId: ctx.companyId, deletedAt: null },
+            _sum: {
+                rmAssignedQty: true,
+                rmConsumedQty: true,
+                rmIrrecoverableLossQty: true,
+                rmRemainingQty: true,
+            },
+        });
+        const balanceByMaterial = new Map(balances.map((b) => [b.rawMaterialId, b._sum]));
+        return materials.map((material) => {
+            const balance = balanceByMaterial.get(material.id);
+            return {
+                ...material,
+                allocatedQty: Number(balance?.rmAssignedQty ?? 0),
+                consumedQty: Number(balance?.rmConsumedQty ?? 0),
+                lossQty: Number(balance?.rmIrrecoverableLossQty ?? 0),
+                availableQty: Number(balance?.rmRemainingQty ?? 0),
+            };
         });
     },
     async create(ctx, data) {

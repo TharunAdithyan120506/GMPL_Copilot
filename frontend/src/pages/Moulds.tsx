@@ -1,40 +1,135 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { useAuth } from '../contexts/useAuth';
+
+interface Vendor {
+  id: string;
+  code: string | null;
+  name: string;
+}
+
+interface Assignment {
+  id: string;
+  vendorId: string;
+  mouldId: string;
+  status: string;
+  rmAssignedQty: number;
+  rmConsumedQty: number;
+  rmRemainingQty: number;
+  assignedAt: string;
+  vendor?: Vendor;
+  rawMaterial?: {
+    code: string;
+    name: string;
+    unit: string;
+  };
+}
 
 interface Mould {
   id: string;
   code: string | null;
   name: string;
   cavityCount: number;
+  partWeightG?: number;
+  runnerWeightG?: number;
+  shotWeightG?: number;
   shotLifeLimit: number;
   shotCountAccumulated: number;
   lifecycleState: string;
+  assignments?: Assignment[];
 }
 
+type StatusFilter = 'all' | 'active' | 'flagged_for_replacement' | 'in_repair' | 'retired' | 'unassigned';
+
 export function Moulds() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isCompany = user?.role === 'company';
+
   const [moulds, setMoulds] = useState<Mould[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingAction, setSavingAction] = useState(false);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedVendorId, setSelectedVendorId] = useState<string>('all');
+  const [selectedMould, setSelectedMould] = useState<Mould | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     code: '', name: '', cavityCount: 1, partWeightG: '', runnerWeightG: '', shotLifeLimit: ''
   });
 
-  const fetchMoulds = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await api.get('/moulds');
-      if (res.data && res.data.data) {
-        setMoulds(res.data.data);
-      }
+      const requests = isCompany
+        ? [api.get('/moulds'), api.get('/vendors/assignments'), api.get('/vendors')]
+        : [api.get('/moulds'), api.get('/vendors/assignments')];
+      const [mouldsRes, assignmentsRes, vendorsRes] = await Promise.all(requests);
+      setMoulds(mouldsRes.data?.data || []);
+      setAssignments(assignmentsRes.data?.data || []);
+      setVendors(vendorsRes?.data?.data || []);
     } catch (error) {
-      console.error('Failed to fetch moulds:', error);
+      console.error('Failed to fetch mould master data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isCompany]);
+
   useEffect(() => {
-    fetchMoulds();
-  }, []);
+    fetchData();
+  }, [fetchData]);
+
+  const vendorById = new Map(vendors.map(vendor => [vendor.id, vendor]));
+  const assignmentCandidates = [
+    ...assignments,
+    ...moulds.flatMap(mould => mould.assignments || []),
+  ];
+  const activeAssignments = Array.from(
+    assignmentCandidates
+      .filter(a => a.status === 'active')
+      .reduce((map, assignment) => {
+        map.set(assignment.id, {
+          ...assignment,
+          vendor: assignment.vendor || vendorById.get(assignment.vendorId),
+        });
+        return map;
+      }, new Map<string, Assignment>())
+      .values()
+  );
+  const assignmentByMould = new Map(activeAssignments.map(a => [a.mouldId, a]));
+
+  const vendorSummaries = vendors.map(vendor => {
+    const vendorAssignments = activeAssignments.filter(a => a.vendorId === vendor.id);
+    const vendorMoulds = vendorAssignments
+      .map(a => moulds.find(m => m.id === a.mouldId))
+      .filter(Boolean) as Mould[];
+    const atRisk = vendorMoulds.filter(m => getHealth(m).level !== 'healthy').length;
+    return {
+      ...vendor,
+      total: vendorAssignments.length,
+      atRisk,
+    };
+  });
+
+  const filteredMoulds = moulds.filter(mould => {
+    const assignment = assignmentByMould.get(mould.id);
+    const matchesSearch =
+      (mould.code?.toLowerCase().includes(search.toLowerCase()) || false) ||
+      mould.name.toLowerCase().includes(search.toLowerCase()) ||
+      (getVendorLabel(assignment).toLowerCase().includes(search.toLowerCase()));
+    const matchesStatus = statusFilter === 'all'
+      ? true
+      : statusFilter === 'unassigned'
+        ? !assignment
+        : mould.lifecycleState === statusFilter;
+    const matchesVendor = selectedVendorId === 'all' ? true : assignment?.vendorId === selectedVendorId;
+    return matchesSearch && matchesStatus && matchesVendor;
+  });
+
+  const selectedAssignment = selectedMould ? assignmentByMould.get(selectedMould.id) : undefined;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,151 +145,281 @@ export function Moulds() {
       await api.post('/moulds', payload);
       setShowModal(false);
       setFormData({ code: '', name: '', cavityCount: 1, partWeightG: '', runnerWeightG: '', shotLifeLimit: '' });
-      fetchMoulds();
-    } catch (err) {
-      console.error('Failed to create mould:', err);
-      alert('Error creating mould.');
+      fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Error creating mould.');
     }
   };
 
-  const filteredMoulds = moulds.filter(m => 
-    (m.code?.toLowerCase().includes(search.toLowerCase()) || '') || 
-    m.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const runLifecycleAction = async (mould: Mould, action: 'move-to-repair' | 'return-to-rotation' | 'retire') => {
+    setSavingAction(true);
+    try {
+      await api.post(`/moulds/${mould.id}/${action}`);
+      await fetchData();
+      const refreshed = await api.get(`/moulds/${mould.id}`);
+      setSelectedMould(refreshed.data?.data || null);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to update mould lifecycle.');
+    } finally {
+      setSavingAction(false);
+    }
+  };
+
+  const clearVendor = () => setSelectedVendorId('all');
 
   return (
     <div className="flex-1 w-full p-margin flex flex-col gap-gutter">
-      {/* Header Actions */}
       <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-4 border-b-4 border-on-background border-dashed">
         <div>
-          <h2 className="font-display-lg text-display-lg text-on-background leading-none">Mould Master</h2>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-2">Manage production assets and lifecycle tracking.</p>
+          <h2 className="font-display-lg text-display-lg text-on-background leading-none">
+            {isCompany ? 'Mould Master' : 'Assigned Mould Health'}
+          </h2>
+          <p className="font-body-md text-body-md text-on-surface-variant mt-2">
+            {isCompany
+              ? 'View mould health by vendor, inspect assignment context, and control lifecycle decisions.'
+              : 'Monitor mould condition, material balance, and production logging for your assigned tools.'}
+          </p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-stretch">
-          {/* Search */}
           <div className="relative flex-1 sm:w-80 group">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-on-background">
               <span className="material-symbols-outlined">search</span>
             </div>
-            <input 
-              className="w-full bg-surface py-3 pl-10 pr-4 font-body-md text-body-md placeholder:text-on-surface-variant border-2 border-on-background neo-shadow-sm focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-[2px_2px_0px_#1A1A1A] transition-all rounded-none" 
-              placeholder="Search ID, Name..." 
+            <input
+              className="w-full bg-surface py-3 pl-10 pr-4 font-body-md text-body-md placeholder:text-on-surface-variant border-2 border-on-background neo-shadow-sm focus:outline-none focus:translate-x-[2px] focus:translate-y-[2px] focus:shadow-[2px_2px_0px_#1A1A1A] transition-all rounded-none"
+              placeholder={isCompany ? 'Search mould or vendor...' : 'Search assigned mould...'}
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          {/* Primary CTA */}
-          <button onClick={() => setShowModal(true)} className="bg-primary-container text-on-primary-container border-2 border-on-background neo-shadow px-6 py-3 font-label-sm text-label-sm uppercase tracking-wider hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-            <span className="material-symbols-outlined fill-icon text-[18px]">add_box</span>
-            Add New Mould
-          </button>
+          {isCompany && (
+            <button onClick={() => setShowModal(true)} className="bg-primary-container text-on-primary-container border-2 border-on-background neo-shadow px-6 py-3 font-label-sm text-label-sm uppercase tracking-wider hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+              <span className="material-symbols-outlined fill-icon text-[18px]">add_box</span>
+              Add New Mould
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Filter Chips (Neobrutalist styling) */}
-      <div className="flex gap-4 overflow-x-auto pb-4 pt-2 -mx-margin px-margin md:mx-0 md:px-0 hide-scrollbar">
-        <button className="shrink-0 bg-on-background text-surface border-2 border-on-background px-4 py-2 font-label-sm text-label-sm uppercase neo-shadow-sm translate-x-[-2px] translate-y-[-2px]">
-          All Moulds ({moulds.length})
-        </button>
-        <button className="shrink-0 bg-surface text-on-background border-2 border-on-background px-4 py-2 font-label-sm text-label-sm uppercase hover:bg-surface-variant hover:shadow-[4px_4px_0px_#1A1A1A] hover:-translate-y-1 transition-all">
-          Active
-        </button>
-        <button className="shrink-0 bg-surface text-on-background border-2 border-on-background px-4 py-2 font-label-sm text-label-sm uppercase hover:bg-surface-variant hover:shadow-[4px_4px_0px_#1A1A1A] hover:-translate-y-1 transition-all">
-          Idle
-        </button>
-        <button className="shrink-0 bg-surface text-on-background border-2 border-on-background px-4 py-2 font-label-sm text-label-sm uppercase hover:bg-danger hover:text-on-error hover:shadow-[4px_4px_0px_#1A1A1A] hover:-translate-y-1 transition-all flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-danger border border-on-background block group-hover:bg-on-error"></span>
-          Repair
-        </button>
+      {isCompany && (
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-bento-gap">
+          <button
+            onClick={clearVendor}
+            className={`text-left border-2 border-on-background p-4 neo-shadow-sm ${selectedVendorId === 'all' ? 'bg-primary-container text-on-primary-container' : 'bg-surface hover:bg-surface-container-low'}`}
+          >
+            <span className="font-label-sm text-label-sm uppercase">All Vendors</span>
+            <div className="font-data-lg text-[32px] font-bold mt-2">{activeAssignments.length}</div>
+            <p className="font-body-md text-body-md mt-1">Assigned moulds in rotation</p>
+          </button>
+          {vendorSummaries.map(vendor => (
+            <button
+              key={vendor.id}
+              onClick={() => setSelectedVendorId(vendor.id)}
+              className={`text-left border-2 border-on-background p-4 neo-shadow-sm transition-colors ${selectedVendorId === vendor.id ? 'bg-primary-container text-on-primary-container' : 'bg-surface hover:bg-surface-container-low'}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="font-label-sm text-label-sm uppercase">{vendor.code || 'Vendor'}</span>
+                  <h3 className="font-headline-md text-headline-md mt-1">{vendor.name}</h3>
+                </div>
+                {vendor.atRisk > 0 && (
+                  <span className="bg-warning border-2 border-on-background px-2 py-1 font-label-sm text-label-sm">{vendor.atRisk} Risk</span>
+                )}
+              </div>
+              <div className="font-data-lg text-[32px] font-bold mt-3">{vendor.total}</div>
+              <p className="font-body-md text-body-md text-on-surface-variant">Click to inspect assigned moulds</p>
+            </button>
+          ))}
+        </section>
+      )}
+
+      <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+        {[
+          { id: 'all', label: `All (${moulds.length})` },
+          { id: 'active', label: 'Active' },
+          { id: 'flagged_for_replacement', label: 'Near Limit' },
+          { id: 'in_repair', label: 'Repair' },
+          { id: 'retired', label: 'Retired' },
+          ...(isCompany ? [{ id: 'unassigned', label: 'Unassigned' }] : []),
+        ].map(filter => (
+          <button
+            key={filter.id}
+            onClick={() => setStatusFilter(filter.id as StatusFilter)}
+            className={`shrink-0 border-2 border-on-background px-4 py-2 font-label-sm text-label-sm uppercase neo-shadow-sm ${statusFilter === filter.id ? 'bg-on-background text-surface' : 'bg-surface text-on-background hover:bg-surface-variant'}`}
+          >
+            {filter.label}
+          </button>
+        ))}
       </div>
 
-      {/* Bento Grid Table Container */}
       <div className="bg-surface border-2 border-on-background neo-shadow flex flex-col overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+          <table className="w-full text-left border-collapse min-w-[1100px]">
             <thead className="bg-surface-variant border-b-2 border-on-background">
               <tr>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-48">Mould ID / Name</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Status</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-64">Shot Count Progress</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-16 text-center">Act</th>
+                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-56">Mould</th>
+                {isCompany && <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Vendor</th>}
+                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Lifecycle</th>
+                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-72">Health</th>
+                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Assignment</th>
+                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-24 text-center">Act</th>
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-on-background">
               {loading ? (
-                <tr><td colSpan={4} className="p-4 text-center font-body-md">Loading moulds...</td></tr>
+                <tr><td colSpan={isCompany ? 6 : 5} className="p-4 text-center font-body-md">Loading moulds...</td></tr>
               ) : filteredMoulds.length === 0 ? (
-                <tr><td colSpan={4} className="p-4 text-center font-body-md">No moulds found.</td></tr>
+                <tr><td colSpan={isCompany ? 6 : 5} className="p-4 text-center font-body-md">No moulds found.</td></tr>
               ) : (
                 filteredMoulds.map(mould => {
-                  const progressPct = mould.shotLifeLimit > 0 
-                    ? Math.min(100, Math.round((mould.shotCountAccumulated / mould.shotLifeLimit) * 100))
-                    : 0;
-                  
-                  const isWarning = progressPct > 90;
-                  
-                  let statusBg = 'bg-surface-variant';
-                  let statusIcon = 'pause_circle';
-                  if (mould.lifecycleState === 'active') {
-                    statusBg = 'bg-success';
-                    statusIcon = 'check_circle';
-                  } else if (mould.lifecycleState === 'in_repair' || mould.lifecycleState === 'flagged_for_replacement') {
-                    statusBg = 'bg-danger text-on-error';
-                    statusIcon = 'build';
-                  }
+                  const assignment = assignmentByMould.get(mould.id);
+                  const health = getHealth(mould);
+                  const lifecycle = getLifecycleStyle(mould.lifecycleState);
 
                   return (
                     <tr key={mould.id} className="hover:bg-surface-container-low transition-colors group">
                       <td className="p-4">
                         <div className="font-data-md text-data-md text-on-background">{mould.code || mould.id.substring(0, 8)}</div>
-                        <div className="font-body-md text-body-md text-on-surface-variant truncate w-40" title={mould.name}>{mould.name}</div>
+                        <div className="font-body-md text-body-md text-on-surface-variant truncate w-48" title={mould.name}>{mould.name}</div>
+                        <div className="font-label-sm text-label-sm text-on-surface-variant mt-1">{mould.cavityCount} cavities</div>
                       </td>
+                      {isCompany && (
+                        <td className="p-4">
+                          {assignment ? (
+                            <button onClick={() => setSelectedVendorId(assignment.vendorId)} className="text-left hover:underline">
+                              <div className="font-bold">{getVendorLabel(assignment)}</div>
+                              <div className="text-secondary text-sm">{assignment.vendor?.code || 'Vendor record unavailable'}</div>
+                            </button>
+                          ) : (
+                            <span className="border-2 border-on-background px-2 py-1 font-label-sm text-label-sm uppercase bg-surface-container-low">Unassigned</span>
+                          )}
+                        </td>
+                      )}
                       <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 ${statusBg} ${statusBg.includes('text-') ? '' : 'text-on-background'} border-2 border-on-background px-2 py-1 font-label-sm text-label-sm uppercase`}>
-                          <span className="material-symbols-outlined text-[14px]">{statusIcon}</span>
+                        <span className={`inline-flex items-center gap-1.5 ${lifecycle.className} border-2 border-on-background px-2 py-1 font-label-sm text-label-sm uppercase`}>
+                          <span className="material-symbols-outlined text-[14px]">{lifecycle.icon}</span>
                           {mould.lifecycleState?.replace(/_/g, ' ') || 'UNKNOWN'}
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <div className={`flex justify-between font-data-md text-data-md text-sm ${isWarning ? 'text-danger font-bold' : ''}`}>
-                            <span>{mould.shotCountAccumulated.toLocaleString()}</span>
-                            <span className="text-on-surface-variant font-normal">{mould.shotLifeLimit.toLocaleString()}</span>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between font-data-md text-data-md text-sm">
+                            <span className={health.level === 'critical' ? 'text-danger font-bold' : ''}>{mould.shotCountAccumulated.toLocaleString()}</span>
+                            <span className="text-on-surface-variant">{mould.shotLifeLimit.toLocaleString()}</span>
                           </div>
                           <div className="h-3 w-full border-2 border-on-background bg-surface-variant overflow-hidden">
-                            <div className={`h-full ${isWarning ? 'bg-warning' : 'bg-success'} border-r-2 border-on-background`} style={{ width: `${progressPct}%` }}></div>
+                            <div className={`h-full ${health.barClass} border-r-2 border-on-background`} style={{ width: `${health.percentage}%` }}></div>
+                          </div>
+                          <div className="flex justify-between text-xs uppercase">
+                            <span className={health.textClass}>{health.label}</span>
+                            <span>{health.percentage}% used</span>
                           </div>
                         </div>
                       </td>
+                      <td className="p-4">
+                        {assignment ? (
+                          <div className="font-body-md text-body-md">
+                            <div>{assignment.rawMaterial?.code || 'RM'} - {assignment.rawMaterial?.name || 'Material'}</div>
+                            <div className="text-secondary text-sm">{Number(assignment.rmRemainingQty || 0).toLocaleString()} kg remaining</div>
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">No active assignment</span>
+                        )}
+                      </td>
                       <td className="p-4 text-center">
-                        <button className="p-2 border-2 border-transparent group-hover:border-on-background group-hover:shadow-[2px_2px_0px_#1A1A1A] group-hover:bg-surface transition-all">
+                        <button
+                          onClick={() => setSelectedMould(mould)}
+                          className="p-2 border-2 border-on-background shadow-[2px_2px_0px_#1A1A1A] bg-surface hover:bg-primary-container transition-all"
+                          aria-label={`Open actions for ${mould.code || mould.name}`}
+                        >
                           <span className="material-symbols-outlined">more_horiz</span>
                         </button>
                       </td>
                     </tr>
-                  )
+                  );
                 })
               )}
             </tbody>
           </table>
         </div>
-        {/* Table Footer */}
         <div className="bg-surface-variant border-t-2 border-on-background p-4 flex justify-between items-center">
-          <span className="font-body-md text-body-md text-on-surface-variant">Showing {moulds.length} entries</span>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border-2 border-on-background bg-surface neo-shadow-sm font-label-sm text-label-sm opacity-50 cursor-not-allowed">PREV</button>
-            <button className="px-3 py-1 border-2 border-on-background bg-surface neo-shadow-sm font-label-sm text-label-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#1A1A1A] transition-all">NEXT</button>
-          </div>
+          <span className="font-body-md text-body-md text-on-surface-variant">
+            Showing {filteredMoulds.length} of {moulds.length} moulds
+          </span>
+          {selectedVendorId !== 'all' && (
+            <button onClick={clearVendor} className="px-3 py-1 border-2 border-on-background bg-surface neo-shadow-sm font-label-sm text-label-sm uppercase">
+              Clear Vendor
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Modal */}
+      {selectedMould && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-on-background/40">
+          <aside className="w-full max-w-xl h-full bg-surface border-l-4 border-on-background shadow-[-8px_0_0_#1A1A1A] overflow-y-auto">
+            <div className="sticky top-0 bg-surface border-b-4 border-on-background p-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="font-label-sm text-label-sm uppercase text-secondary">Mould Action Center</div>
+                <h3 className="font-headline-lg text-headline-lg">{selectedMould.code || selectedMould.id.substring(0, 8)}</h3>
+                <p className="font-body-md text-body-md text-on-surface-variant">{selectedMould.name}</p>
+              </div>
+              <button onClick={() => setSelectedMould(null)} className="w-9 h-9 border-2 border-on-background bg-error-container text-danger flex items-center justify-center">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-5 flex flex-col gap-5">
+              <MouldHealthPanel mould={selectedMould} assignment={selectedAssignment} />
+
+              {isCompany ? (
+                <section className="border-2 border-on-background p-4 bg-surface-container-low">
+                  <h4 className="font-headline-md text-headline-md mb-3">Company Decisions</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedMould.lifecycleState !== 'in_repair' && selectedMould.lifecycleState !== 'retired' && (
+                      <button disabled={savingAction} onClick={() => runLifecycleAction(selectedMould, 'move-to-repair')} className="border-2 border-on-background bg-warning px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
+                        Move to Repair
+                      </button>
+                    )}
+                    {selectedMould.lifecycleState === 'in_repair' && (
+                      <button disabled={savingAction} onClick={() => runLifecycleAction(selectedMould, 'return-to-rotation')} className="border-2 border-on-background bg-success text-on-primary px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
+                        Return Active
+                      </button>
+                    )}
+                    {selectedMould.lifecycleState !== 'retired' && (
+                      <button disabled={savingAction} onClick={() => runLifecycleAction(selectedMould, 'retire')} className="border-2 border-on-background bg-danger text-on-error px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
+                        Retire Mould
+                      </button>
+                    )}
+                    {selectedAssignment && (
+                      <button onClick={() => navigate('/vendors')} className="border-2 border-on-background bg-surface px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm">
+                        Manage Assignment
+                      </button>
+                    )}
+                  </div>
+                </section>
+              ) : (
+                <section className="border-2 border-on-background p-4 bg-surface-container-low">
+                  <h4 className="font-headline-md text-headline-md mb-3">Vendor Actions</h4>
+                  <button
+                    disabled={!selectedAssignment || selectedMould.lifecycleState !== 'active'}
+                    onClick={() => selectedAssignment && navigate(`/logs/new?assignmentId=${selectedAssignment.id}`)}
+                    className="w-full border-2 border-on-background bg-deep-orange text-surface px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50"
+                  >
+                    Log Production
+                  </button>
+                </section>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
+
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface border-4 border-on-background shadow-[8px_8px_0px_#1A1A1A] w-full max-w-2xl p-6 relative my-auto">
-            <button 
+            <button
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-on-background bg-error-container text-danger hover:bg-danger hover:text-on-error transition-colors"
             >
@@ -237,4 +462,72 @@ export function Moulds() {
       )}
     </div>
   );
+}
+
+function MouldHealthPanel({ mould, assignment }: { mould: Mould; assignment?: Assignment }) {
+  const health = getHealth(mould);
+  return (
+    <section className="border-2 border-on-background p-4 bg-surface">
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h4 className="font-headline-md text-headline-md">Health Snapshot</h4>
+          <p className={`font-label-sm text-label-sm uppercase mt-1 ${health.textClass}`}>{health.label}</p>
+        </div>
+        <div className="font-data-lg text-[32px] font-bold">{health.percentage}%</div>
+      </div>
+      <div className="h-5 w-full border-2 border-on-background bg-surface-variant overflow-hidden mb-4">
+        <div className={`h-full ${health.barClass} border-r-2 border-on-background`} style={{ width: `${health.percentage}%` }}></div>
+      </div>
+      <dl className="grid grid-cols-2 gap-3 text-sm">
+        <Metric label="Shots Run" value={mould.shotCountAccumulated.toLocaleString()} />
+        <Metric label="Life Limit" value={mould.shotLifeLimit.toLocaleString()} />
+        <Metric label="Cavities" value={mould.cavityCount.toLocaleString()} />
+        <Metric label="Shot Weight" value={`${Number(mould.shotWeightG || 0).toLocaleString()} g`} />
+        <Metric label="Vendor" value={assignment ? getVendorLabel(assignment) : 'Unassigned'} />
+        <Metric label="RM Balance" value={assignment ? `${Number(assignment.rmRemainingQty || 0).toLocaleString()} kg` : 'Not assigned'} />
+      </dl>
+    </section>
+  );
+}
+
+function getVendorLabel(assignment?: Assignment) {
+  if (!assignment) return '';
+  return assignment.vendor?.name || `Vendor ID ${assignment.vendorId.slice(0, 8)}`;
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-outline-variant bg-surface-container-low p-3">
+      <dt className="font-label-sm text-label-sm uppercase text-secondary">{label}</dt>
+      <dd className="font-data-md text-data-md font-bold mt-1">{value}</dd>
+    </div>
+  );
+}
+
+function getHealth(mould: Mould) {
+  const percentage = mould.shotLifeLimit > 0
+    ? Math.min(100, Math.round((mould.shotCountAccumulated / mould.shotLifeLimit) * 100))
+    : 0;
+
+  if (mould.lifecycleState === 'retired') {
+    return { percentage, level: 'retired', label: 'Retired', barClass: 'bg-secondary', textClass: 'text-secondary' };
+  }
+  if (mould.lifecycleState === 'in_repair') {
+    return { percentage, level: 'critical', label: 'In repair', barClass: 'bg-danger', textClass: 'text-danger' };
+  }
+  if (percentage >= 90 || mould.lifecycleState === 'flagged_for_replacement') {
+    return { percentage, level: 'critical', label: 'Critical attention', barClass: 'bg-danger', textClass: 'text-danger' };
+  }
+  if (percentage >= 75) {
+    return { percentage, level: 'watch', label: 'Watch closely', barClass: 'bg-warning', textClass: 'text-warning' };
+  }
+  return { percentage, level: 'healthy', label: 'Healthy', barClass: 'bg-success', textClass: 'text-success' };
+}
+
+function getLifecycleStyle(state: string) {
+  if (state === 'active') return { className: 'bg-success text-on-primary', icon: 'check_circle' };
+  if (state === 'in_repair') return { className: 'bg-warning text-on-background', icon: 'build' };
+  if (state === 'flagged_for_replacement') return { className: 'bg-danger text-on-error', icon: 'warning' };
+  if (state === 'retired') return { className: 'bg-surface-container-highest text-secondary', icon: 'block' };
+  return { className: 'bg-surface-variant text-on-background', icon: 'help' };
 }

@@ -1,8 +1,9 @@
 import { prisma } from '../../shared/prisma';
 
 export const NotificationService = {
-  async enqueue(companyId: string, type: string, payload: object) {
-    return prisma.notification.create({
+  async enqueue(companyId: string, type: string, payload: object, tx?: any) {
+    const client = tx ?? prisma;
+    return client.notification.create({
       data: { companyId, type, payload, status: 'pending' },
     });
   },

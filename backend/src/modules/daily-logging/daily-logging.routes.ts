@@ -24,6 +24,15 @@ router.post('/', authorize('log.create'), scopeVendor, async (req: Request, res:
   }
 });
 
+router.patch('/:id', authorize('log.edit'), scopeVendor, async (req: Request, res: Response) => {
+  try {
+    const data = await DailyLoggingService.updateDraft((req as any).auth, req.params.id as string, req.body);
+    return success(res, data);
+  } catch (err: any) {
+    return error(res, err.code || 'INTERNAL', err.message, err.status || 500);
+  }
+});
+
 router.post('/:id/submit', authorize('log.submit'), scopeVendor, async (req: Request, res: Response) => {
   try {
     const idempotencyKey = req.headers['idempotency-key'] as string;
