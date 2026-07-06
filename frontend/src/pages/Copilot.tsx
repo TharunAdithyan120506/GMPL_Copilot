@@ -20,7 +20,8 @@ export function Copilot() {
     if (user?.role === 'company') {
       initializeConversation();
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });

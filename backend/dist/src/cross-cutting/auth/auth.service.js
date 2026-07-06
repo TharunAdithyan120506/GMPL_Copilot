@@ -41,7 +41,7 @@ exports.AuthService = {
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             },
         });
-        return { accessToken, refreshToken, user: { id: user.id, role: user.role.key, vendorId: user.vendorId } };
+        return { accessToken, refreshToken, user: { id: user.id, role: user.role.key, vendorId: user.vendorId, permissions } };
     },
     async logout(token) {
         await prisma_1.prisma.session.deleteMany({ where: { token } });

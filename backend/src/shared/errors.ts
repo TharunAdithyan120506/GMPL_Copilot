@@ -11,7 +11,7 @@ export class AppError extends Error {
 }
 
 export const Errors = {
-  unauthorized: () => new AppError('AUTH_REQUIRED', 'Authentication required', 401),
+  unauthorized: (msg = 'Authentication required') => new AppError('AUTH_REQUIRED', msg, 401),
   forbidden: (msg = 'Insufficient permissions') => new AppError('FORBIDDEN', msg, 403),
   notFound: (entity = 'Resource') => new AppError('NOT_FOUND', `${entity} not found`, 404),
   conflict: (msg: string) => new AppError('CONFLICT', msg, 409),

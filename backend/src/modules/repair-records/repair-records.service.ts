@@ -78,6 +78,24 @@ export const RepairService = {
     const validStatuses = ['transit', 'repair', 'ready', 'scrapped'];
     if (!validStatuses.includes(status)) throw Errors.validation([{ field: 'status', issue: 'Invalid status' }]);
 
+    // State machine: only allow valid transitions
+    const VALID_REPAIR_TRANSITIONS: Record<string, string[]> = {
+      transit: ['repair'],
+      repair: ['ready', 'scrapped'],
+      ready: ['repair'],   // reopen only
+      scrapped: [],         // terminal state
+    };
+
+    const before = await prisma.repairRecord.findFirst({
+      where: { id, companyId: ctx.companyId, deletedAt: null },
+    });
+    if (!before) throw Errors.notFound('Repair record');
+
+    const allowedNext = VALID_REPAIR_TRANSITIONS[before.status] || [];
+    if (!allowedNext.includes(status)) {
+      throw Errors.stateTransition(`Cannot transition repair from '${before.status}' to '${status}'`);
+    }
+
     const updateData: any = { status, updatedBy: ctx.userId };
     if (reworkDescription) updateData.reworkDescription = reworkDescription;
     
@@ -88,10 +106,6 @@ export const RepairService = {
     }
 
     return prisma.$transaction(async (tx) => {
-      const before = await tx.repairRecord.findFirst({
-        where: { id, companyId: ctx.companyId, deletedAt: null },
-      });
-      if (!before) throw Errors.notFound('Repair record');
 
       const repair = await tx.repairRecord.update({
         where: { id },

@@ -6,6 +6,14 @@ const auth_middleware_1 = require("../../cross-cutting/auth/auth.middleware");
 const response_1 = require("../../shared/response");
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.authenticate);
+// Company-only guard for all analytics endpoints
+router.use((req, res, next) => {
+    const auth = req.auth;
+    if (auth?.role !== 'company') {
+        return (0, response_1.error)(res, 'FORBIDDEN', 'Analytics is restricted to company admins', 403);
+    }
+    next();
+});
 router.get('/dashboard', async (req, res) => {
     try {
         const data = await analytics_service_1.AnalyticsService.getDashboardMetrics(req.auth);

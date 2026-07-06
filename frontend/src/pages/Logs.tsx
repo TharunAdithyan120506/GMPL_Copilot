@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import { useState } from 'react';
 import { useAuth } from '../contexts/useAuth';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { LogRepository } from '../repositories/log.repository';
+import { db } from '../lib/db';
+import { SkeletonTable, FreshnessLabel } from '../components/Skeleton';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 
 interface ProductionLog {
   id: string;
@@ -13,8 +17,17 @@ interface ProductionLog {
 }
 
 export function Logs() {
-  const [logs, setLogs] = useState<ProductionLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { isOnline } = useSyncStatus();
+
+  // ── Cache-first: reads IndexedDB instantly, background-refreshes from server ──
+  const { data: logs, isFirstLoad, lastSyncedAt } = useLiveQuery(
+    () => LogRepository.getAll() as any,
+    (force) => LogRepository.refresh(force),
+    db.logs as any,
+    'logs',
+  );
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   
@@ -23,25 +36,6 @@ export function Logs() {
   const [newRej, setNewRej] = useState<number | ''>('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  
-  const { user } = useAuth();
-
-  const fetchLogs = async () => {
-    try {
-      const res = await api.get('/logs'); // Both roles can use this, backend scopes automatically
-      if (res.data && res.data.data) {
-        setLogs(res.data.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch logs', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchLogs();
-  }, []);
 
   const openEditModal = (log: ProductionLog) => {
     setSelectedLogId(log.id);
@@ -57,7 +51,7 @@ export function Logs() {
     
     setSubmitting(true);
     try {
-      await api.post('/edit-requests', {
+      await LogRepository.requestEdit({
         dailyProductionLogId: selectedLogId,
         requestedChanges: {
           acceptedQty: newAcc,
@@ -65,10 +59,10 @@ export function Logs() {
         },
         reason
       });
-      alert('Edit request submitted successfully. Waiting for company approval.');
+      // Optimistic update close
       setEditModalOpen(false);
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to submit edit request.');
+      alert(err.message || 'Failed to submit edit request.');
     } finally {
       setSubmitting(false);
     }
@@ -84,60 +78,63 @@ export function Logs() {
           <p className="font-body-md text-body-md text-on-surface-variant mt-2">
             History of submitted production logs.
           </p>
+          <FreshnessLabel lastSyncedAt={lastSyncedAt} isOnline={isOnline} className="mt-1" />
         </div>
       </header>
 
-      <div className="bg-surface border-2 border-on-background neo-shadow flex flex-col overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="bg-surface-variant border-b-2 border-on-background">
-              <tr>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-48">Date</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Mould</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Yield (Acc/Rej)</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Status</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y-2 divide-on-background">
-              {loading ? (
-                <tr><td colSpan={5} className="p-4 text-center font-body-md">Loading logs...</td></tr>
-              ) : logs.length === 0 ? (
-                <tr><td colSpan={5} className="p-4 text-center font-body-md">No logs found.</td></tr>
-              ) : (
-                logs.map(log => (
-                  <tr key={log.id} className="hover:bg-surface-container-low transition-colors">
-                    <td className="p-4 font-data-md text-data-md">
-                      {new Date(log.logDate).toLocaleDateString()}
-                    </td>
-                    <td className="p-4 font-body-md text-body-md text-on-background font-medium">
-                      {log.mould?.code} ({log.mould?.name})
-                    </td>
-                    <td className="p-4 font-data-md text-data-md text-secondary">
-                      <span className="text-success">{log.acceptedQty}</span> / <span className="text-danger">{log.rejectedQty}</span>
-                    </td>
-                    <td className="p-4">
-                      <span className="bg-surface-variant border-2 border-on-background px-2 py-1 font-label-sm text-label-sm uppercase">
-                        {log.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      {user?.role === 'vendor' && ['submitted', 'corrected'].includes(log.status) && (
-                        <button 
-                          onClick={() => openEditModal(log)}
-                          className="bg-primary-container text-on-primary-container border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm px-3 py-1 uppercase hover:neo-active"
-                        >
-                          Request Edit
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {isFirstLoad ? (
+        <SkeletonTable cols={5} rows={6} />
+      ) : (
+        <div className="bg-surface border-2 border-on-background neo-shadow flex flex-col overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead className="bg-surface-variant border-b-2 border-on-background">
+                <tr>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-48">Date</th>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Mould</th>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Yield (Acc/Rej)</th>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Status</th>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y-2 divide-on-background">
+                {logs.length === 0 ? (
+                  <tr><td colSpan={5} className="p-4 text-center font-body-md">No logs found.</td></tr>
+                ) : (
+                  (logs as ProductionLog[]).map(log => (
+                    <tr key={log.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="p-4 font-data-md text-data-md">
+                        {new Date(log.logDate).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 font-body-md text-body-md text-on-background font-medium">
+                        {log.mould?.code} ({log.mould?.name})
+                      </td>
+                      <td className="p-4 font-data-md text-data-md text-secondary">
+                        <span className="text-success">{log.acceptedQty}</span> / <span className="text-danger">{log.rejectedQty}</span>
+                      </td>
+                      <td className="p-4">
+                        <span className="bg-surface-variant border-2 border-on-background px-2 py-1 font-label-sm text-label-sm uppercase">
+                          {log.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        {user?.role === 'vendor' && ['submitted', 'corrected'].includes(log.status) && (
+                          <button 
+                            onClick={() => openEditModal(log)}
+                            className="bg-primary-container text-on-primary-container border-2 border-on-background neo-shadow-sm font-label-sm text-label-sm px-3 py-1 uppercase hover:neo-active"
+                          >
+                            Request Edit
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Edit Request Modal */}
       {editModalOpen && (
@@ -159,11 +156,11 @@ export function Logs() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="font-label-sm text-label-sm uppercase">Proposed Acc Qty</label>
-                  <input type="number" required value={newAcc} onChange={e => setNewAcc(parseInt(e.target.value) || '')} className="border-2 border-on-background neo-shadow-sm p-2 font-data-md text-data-md focus:outline-none" />
+                  <input type="number" required value={newAcc} onChange={e => { const v = parseInt(e.target.value); setNewAcc(Number.isNaN(v) ? '' : v); }} className="border-2 border-on-background neo-shadow-sm p-2 font-data-md text-data-md focus:outline-none" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="font-label-sm text-label-sm uppercase">Proposed Rej Qty</label>
-                  <input type="number" required value={newRej} onChange={e => setNewRej(parseInt(e.target.value) || '')} className="border-2 border-on-background neo-shadow-sm p-2 font-data-md text-data-md focus:outline-none" />
+                  <input type="number" required value={newRej} onChange={e => { const v = parseInt(e.target.value); setNewRej(Number.isNaN(v) ? '' : v); }} className="border-2 border-on-background neo-shadow-sm p-2 font-data-md text-data-md focus:outline-none" />
                 </div>
               </div>
 

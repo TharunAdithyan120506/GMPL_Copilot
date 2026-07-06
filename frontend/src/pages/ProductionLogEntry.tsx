@@ -1,239 +1,386 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import { useFormDraft } from '../hooks/useFormDraft';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { MouldRepository } from '../repositories/mould.repository';
+import { LogRepository } from '../repositories/log.repository';
+import { db } from '../lib/db';
+import { SkeletonCard } from '../components/Skeleton';
 
 export function ProductionLogEntry() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const assignmentId = searchParams.get('assignmentId');
 
-  const [assignment, setAssignment] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: moulds, isFirstLoad } = useLiveQuery<any>(
+    () => MouldRepository.getAll() as any,
+    (force) => MouldRepository.refresh(force),
+    db.moulds as any,
+    'moulds'
+  );
+
+  const mould = (moulds as any[]).find(m => m.assignments?.some((a: any) => a.id === assignmentId));
+  const assignment = mould?.assignments?.find((a: any) => a.id === assignmentId);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const [acceptedQty, setAcceptedQty] = useState(0);
-  const [rejectedQty, setRejectedQty] = useState(0);
+  const [acceptedQty, setAcceptedQty] = useState<number | ''>('');
+  const [rejectedQty, setRejectedQty] = useState<number | ''>('');
   const [dispatchedQty, setDispatchedQty] = useState<number | ''>('');
-  
+
   const [downtime, setDowntime] = useState(false);
-  const [downtimeMinutes, setDowntimeMinutes] = useState<number | ''>('');
+  const [downtimeHours, setDowntimeHours] = useState<number | ''>('');
+  const [downtimeMins, setDowntimeMins] = useState<number | ''>('');
   const [downtimeReason, setDowntimeReason] = useState('');
 
-  useEffect(() => {
-    if (!assignmentId) {
-      setError('No mould selected. Please open My Moulds and choose Log Production for an assigned mould.');
-      setLoading(false);
-      return;
-    }
+  const draftKey = `production-log-${assignmentId ?? 'new'}`;
+  const { draft, savedAt, saveDraft, clearDraft } = useFormDraft<{
+    acceptedQty: number | ''; rejectedQty: number | ''; dispatchedQty: number | '';
+    downtime: boolean; downtimeHours: number | ''; downtimeMins: number | ''; downtimeReason: string;
+  }>(draftKey);
+  const [draftRestored, setDraftRestored] = useState(false);
 
-    const fetchAssignment = async () => {
-      try {
-        const res = await api.get('/vendors/assignments');
-        if (res.data && res.data.data) {
-          const match = res.data.data.find((a: any) => a.id === assignmentId);
-          if (match) {
-            setAssignment(match);
-          } else {
-            setError('Assignment not found or unauthorized.');
-          }
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.error?.message || 'Failed to load assignment details.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAssignment();
-  }, [assignmentId]);
+  useEffect(() => {
+    if (draft && !draftRestored) {
+      setAcceptedQty(draft.acceptedQty);
+      setRejectedQty(draft.rejectedQty);
+      setDispatchedQty(draft.dispatchedQty);
+      setDowntime(draft.downtime);
+      setDowntimeHours(draft.downtimeHours);
+      setDowntimeMins(draft.downtimeMins);
+      setDowntimeReason(draft.downtimeReason);
+      setDraftRestored(true);
+    }
+  }, [draft, draftRestored]);
+
+  useEffect(() => {
+    if (draftRestored) {
+      saveDraft({ acceptedQty, rejectedQty, dispatchedQty, downtime, downtimeHours, downtimeMins, downtimeReason });
+    }
+  }, [acceptedQty, rejectedQty, dispatchedQty, downtime, downtimeHours, downtimeMins, downtimeReason, draftRestored, saveDraft]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignment) return;
-    
+    if (!assignment || !mould) return;
+
+    const accepted = Number(acceptedQty) || 0;
+    const rejected = Number(rejectedQty) || 0;
+
     setSubmitting(true);
     setError('');
 
+    const totalParts = accepted + rejected;
+    const cavityCount = Number(mould.cavityCount) || 1;
+    if (totalParts === 0) {
+      setError('Please enter at least one accepted or rejected part.');
+      setSubmitting(false);
+      return;
+    }
+    if (totalParts % cavityCount !== 0) {
+      setError(`Total parts (${totalParts}) must be divisible by cavity count (${cavityCount}).`);
+      setSubmitting(false);
+      return;
+    }
+
+    // Convert hours + minutes to total minutes for the backend
+    const totalDowntimeMinutes = downtime
+      ? (Number(downtimeHours) || 0) * 60 + (Number(downtimeMins) || 0)
+      : 0;
+
     try {
-      // 1. Create Draft
       const draftPayload = {
         assignmentId: assignment.id,
         mouldId: assignment.mouldId,
-        logDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-        acceptedQty,
-        rejectedQty,
-        dispatchedQty: dispatchedQty || 0,
-        downtimeMinutes: downtime ? (downtimeMinutes || 0) : 0,
-        downtimeReason: downtime ? downtimeReason : null
+        logDate: new Date().toISOString().split('T')[0],
+        acceptedQty: accepted,
+        rejectedQty: rejected,
+        dispatchedQty: Number(dispatchedQty) || 0,
+        downtimeMinutes: downtime ? totalDowntimeMinutes : 0,
+        downtimeReason: downtime ? downtimeReason : undefined,
       };
 
-      const draftRes = await api.post('/logs', draftPayload);
-      const logId = draftRes.data.data.id;
+      const tempId = await LogRepository.createDraft(draftPayload);
+      const idempotencyKey = crypto.randomUUID();
+      await LogRepository.submitLog(tempId, idempotencyKey);
 
-      // 2. Submit Draft (Atomic processing)
-      // For idempotency key, we can generate a random UUID
-      const idempotencyKey = crypto.randomUUID(); 
-      await api.post(`/logs/${logId}/submit`, {}, {
-        headers: { 'Idempotency-Key': idempotencyKey }
-      });
-
-      alert('Production log submitted successfully!');
+      await clearDraft();
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to submit log. Please check validations.');
+      setError(err.message || 'Failed to submit log. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="p-margin font-body-md">Loading...</div>;
+  if (isFirstLoad) {
+    return <div className="p-margin max-w-2xl mx-auto"><SkeletonCard /></div>;
+  }
+
+  if (!assignmentId || !assignment) {
+    return (
+      <div className="p-margin text-center flex flex-col items-center justify-center h-full gap-4">
+        <span className="material-symbols-outlined text-[56px] text-warning">warning</span>
+        <h2 className="font-headline-lg">No Mould Selected</h2>
+        <p className="text-on-surface-variant">Go back to My Moulds and tap "Log Production".</p>
+        <button onClick={() => navigate('/moulds')} className="mt-4 bg-primary-container text-on-primary-container border-2 border-on-background px-6 py-3 font-label-sm uppercase neo-shadow">
+          Go to My Moulds
+        </button>
+      </div>
+    );
+  }
+
+  const accepted = Number(acceptedQty) || 0;
+  const rejected = Number(rejectedQty) || 0;
+  const total = accepted + rejected;
+  const cavityCount = Number(mould?.cavityCount) || 1;
+  const isValidTotal = total > 0 && total % cavityCount === 0;
 
   return (
-    <div className="flex-grow flex justify-center py-margin px-4 md:px-margin overflow-y-auto">
-      <div className="w-full max-w-3xl flex flex-col gap-gutter">
-        
+    <div className="flex-grow flex justify-center py-6 px-4 md:px-8 overflow-y-auto bg-background">
+      <div className="w-full max-w-xl flex flex-col gap-5">
+
         {/* Page Header */}
-        <div className="flex flex-col gap-2 mb-4">
-          <h1 className="font-headline-lg text-headline-lg text-on-background">
-            Daily Log for <span className="text-deep-orange">{assignment?.mould?.code || 'Unknown Mould'}</span>
+        <div className="border-b-2 border-on-background pb-4">
+          <button onClick={() => navigate('/moulds')} className="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm uppercase mb-3 hover:text-on-background transition-colors">
+            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+            Back to My Moulds
+          </button>
+          <h1 className="font-display-lg text-[28px] font-black leading-tight text-on-background">
+            Daily Log Entry
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant flex items-center gap-2">
-            <span className="material-symbols-outlined text-on-surface-variant">calendar_today</span>
-            <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-          </p>
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            <span className="bg-primary-container text-on-primary-container border-2 border-on-background px-3 py-1 font-label-sm text-label-sm uppercase font-bold neo-shadow-sm">
+              {assignment.mould?.code || mould?.code || 'Mould'}
+            </span>
+            <span className="font-body-md text-on-surface-variant">
+              {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </span>
+          </div>
+          {savedAt && (
+            <p className="font-label-sm text-[11px] text-secondary uppercase mt-2">
+              ✓ Draft autosaved at {new Date(savedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          )}
         </div>
 
+        {/* Error */}
         {error && (
-          <div className="bg-error-container border-2 border-on-background p-4 flex items-start gap-3 rounded-DEFAULT mb-2">
-            <span className="material-symbols-outlined fill-icon text-danger mt-0.5">error</span>
+          <div className="bg-error-container border-2 border-danger p-4 flex items-start gap-3 neo-shadow-sm">
+            <span className="material-symbols-outlined fill-icon text-danger mt-0.5 shrink-0">error</span>
             <p className="font-body-md text-danger font-bold">{error}</p>
           </div>
         )}
 
-        {/* Warning Badge */}
-        <div className="bg-warning border-2 border-on-background neo-shadow p-4 flex items-start gap-3 rounded-DEFAULT mb-2">
-          <span className="material-symbols-outlined fill-icon text-on-background mt-0.5">lock</span>
-          <div>
-            <h3 className="font-headline-md text-body-lg font-bold text-on-background mb-1">Final Submission Warning</h3>
-            <p className="font-body-md text-body-md text-on-background">This entry will lock permanently after submission. Please verify all quantities before finalizing.</p>
-          </div>
-        </div>
+        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
 
-        {/* The Form (Bento Layout) */}
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-bento-gap" onSubmit={handleSubmit}>
-          
-          {/* Accepted Qty */}
-          <div className="bg-surface border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col gap-4">
-            <label className="font-label-sm text-label-sm uppercase text-on-background">Accepted Quantity</label>
-            <div className="flex items-center justify-between bg-surface-container-low border-2 border-on-background p-2 neo-shadow-sm h-[72px]">
-              <button type="button" onClick={() => setAcceptedQty(Math.max(0, acceptedQty - 1))} className="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background">
-                <span className="material-symbols-outlined">remove</span>
-              </button>
-              <input type="number" value={acceptedQty} onChange={(e) => setAcceptedQty(parseInt(e.target.value) || 0)} className="w-full text-center font-data-lg text-[48px] bg-transparent border-none focus:ring-0 text-success p-0 font-bold" min="0" />
-              <button type="button" onClick={() => setAcceptedQty(acceptedQty + 1)} className="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background">
-                <span className="material-symbols-outlined">add</span>
-              </button>
-            </div>
+          {/* Accepted Qty — BIG tap-friendly input */}
+          <div className="bg-surface border-2 border-on-background neo-shadow p-5">
+            <label htmlFor="accepted-qty" className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-1">
+              Accepted Parts <span className="text-success font-bold">✓ Good</span>
+            </label>
+            <p className="font-body-md text-body-md text-on-surface-variant mb-3">
+              How many parts passed quality check?
+            </p>
+            <input
+              id="accepted-qty"
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              min="0"
+              value={acceptedQty}
+              onChange={e => setAcceptedQty(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
+              placeholder="Enter number"
+              className="w-full h-20 bg-surface-container-low border-2 border-on-background text-center text-[40px] font-black text-success focus:outline-none focus:border-success neo-shadow-sm transition-all"
+            />
           </div>
 
           {/* Rejected Qty */}
-          <div className="bg-surface border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col gap-4">
-            <label className="font-label-sm text-label-sm uppercase text-on-background flex justify-between">
-              <span>Rejected Quantity</span>
-              <span className="text-danger">Critical Metric</span>
+          <div className="bg-surface border-2 border-on-background neo-shadow p-5">
+            <label htmlFor="rejected-qty" className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-1">
+              Rejected Parts <span className="text-danger font-bold">✗ Defects</span>
             </label>
-            <div className="flex items-center justify-between bg-surface-container-low border-2 border-on-background p-2 neo-shadow-sm h-[72px]">
-              <button type="button" onClick={() => setRejectedQty(Math.max(0, rejectedQty - 1))} className="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background">
-                <span className="material-symbols-outlined">remove</span>
-              </button>
-              <input type="number" value={rejectedQty} onChange={(e) => setRejectedQty(parseInt(e.target.value) || 0)} className="w-full text-center font-data-lg text-[48px] bg-transparent border-none focus:ring-0 text-danger p-0 font-bold" min="0" />
-              <button type="button" onClick={() => setRejectedQty(rejectedQty + 1)} className="w-12 h-12 flex items-center justify-center bg-surface border-2 border-on-background neo-shadow active:neo-active rounded-DEFAULT text-on-background">
-                <span className="material-symbols-outlined">add</span>
-              </button>
+            <p className="font-body-md text-body-md text-on-surface-variant mb-3">
+              How many parts failed quality check?
+            </p>
+            <input
+              id="rejected-qty"
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              min="0"
+              value={rejectedQty}
+              onChange={e => setRejectedQty(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
+              placeholder="Enter number"
+              className="w-full h-20 bg-surface-container-low border-2 border-on-background text-center text-[40px] font-black text-danger focus:outline-none focus:border-danger neo-shadow-sm transition-all"
+            />
+          </div>
+
+          {/* Live summary */}
+          {total > 0 && (
+            <div className={`border-2 ${isValidTotal ? 'border-success bg-success/10' : 'border-warning bg-warning/10'} p-4 flex items-center justify-between`}>
+              <div className="font-body-md text-on-background">
+                <span className="font-bold">{total.toLocaleString()}</span> total parts
+                {!isValidTotal && (
+                  <span className="text-warning block text-sm mt-0.5">
+                    Must be divisible by {cavityCount} (cavity count)
+                  </span>
+                )}
+              </div>
+              {isValidTotal && (
+                <span className="material-symbols-outlined text-success text-[28px]">check_circle</span>
+              )}
+            </div>
+          )}
+
+          {/* Dispatched Qty */}
+          <div className="bg-surface border-2 border-on-background neo-shadow p-5">
+            <label htmlFor="dispatched-qty" className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-1">
+              Dispatched Today
+            </label>
+            <p className="font-body-md text-body-md text-on-surface-variant mb-3">
+              Units sent to central warehouse today (optional).
+            </p>
+            <div className="flex items-center gap-3 bg-surface-container-low border-2 border-on-background neo-shadow-sm h-16 px-4">
+              <span className="material-symbols-outlined text-on-surface-variant">local_shipping</span>
+              <input
+                id="dispatched-qty"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={dispatchedQty}
+                onChange={e => setDispatchedQty(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
+                placeholder="0"
+                className="w-full h-full bg-transparent border-none focus:ring-0 text-[28px] font-bold text-on-background outline-none"
+              />
             </div>
           </div>
 
-          {/* Downtime Section */}
-          <div className="col-span-1 md:col-span-2 bg-surface border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col gap-6">
-            <div className="flex items-center justify-between border-b-2 border-on-background pb-6">
-              <div className="flex flex-col gap-1">
-                <label className="font-headline-md text-headline-md text-on-background m-0">Record Downtime</label>
-                <span className="font-body-md text-body-md text-on-surface-variant">Toggle if the machine experienced delays.</span>
+          {/* Downtime Toggle */}
+          <div className="bg-surface border-2 border-on-background neo-shadow p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-headline-md text-on-background font-bold">Machine Downtime?</p>
+                <p className="font-body-md text-on-surface-variant text-sm mt-1">
+                  Did the machine stop or have delays today?
+                </p>
               </div>
-              <label className="flex items-center cursor-pointer">
-                <div className="relative">
-                  <input type="checkbox" className="sr-only" checked={downtime} onChange={(e) => setDowntime(e.target.checked)} />
-                  <div className="block bg-surface-dim border-2 border-on-background w-16 h-10 rounded-full neo-shadow"></div>
-                  <div className={`absolute left-1.5 top-1.5 w-7 h-7 rounded-full transition-transform duration-200 ${downtime ? 'translate-x-[100%] bg-primary-container' : 'bg-on-background'}`}></div>
-                </div>
-              </label>
+              {/* Large tap-target toggle */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={downtime}
+                onClick={() => setDowntime(v => !v)}
+                className={`relative w-20 h-11 rounded-full border-2 border-on-background transition-colors duration-200 neo-shadow-sm shrink-0 ${downtime ? 'bg-warning' : 'bg-surface-dim'}`}
+              >
+                <div className={`absolute top-1 w-8 h-8 rounded-full border-2 border-on-background transition-all duration-200 ${downtime ? 'left-9 bg-on-background' : 'left-1 bg-on-surface-variant'}`} />
+              </button>
             </div>
-            
+
             {downtime && (
-              <div className="flex flex-col md:flex-row gap-6 transition-opacity duration-300">
-                <div className="flex-1 flex flex-col gap-2">
-                  <label className="font-label-sm text-label-sm uppercase text-on-background">Downtime Reason</label>
-                  <div className="relative w-full h-[56px]">
-                    <select 
-                      value={downtimeReason}
-                      onChange={(e) => setDowntimeReason(e.target.value)}
-                      className="w-full h-full appearance-none bg-surface border-2 border-on-background neo-shadow-sm focus:outline-none focus:ring-0 rounded-DEFAULT px-4 font-body-lg text-body-lg text-on-background cursor-pointer"
-                    >
-                      <option disabled value="">Select Primary Reason</option>
-                      <option value="manpower">Manpower Shortage</option>
-                      <option value="machine">Machine Failure</option>
-                      <option value="mould">Mould Issue/Repair</option>
-                      <option value="power">Power Outage</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-on-background">
-                      <span className="material-symbols-outlined">expand_more</span>
-                    </div>
+              <div className="mt-5 pt-5 border-t-2 border-on-background flex flex-col gap-4">
+                {/* Reason */}
+                <div>
+                  <label className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-2">
+                    What caused it?
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'machine', label: 'Machine Fault', icon: 'build' },
+                      { value: 'mould', label: 'Mould Issue', icon: 'precision_manufacturing' },
+                      { value: 'manpower', label: 'Manpower', icon: 'person_off' },
+                      { value: 'power', label: 'Power Cut', icon: 'bolt' },
+                      { value: 'other', label: 'Other Reason', icon: 'more_horiz' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setDowntimeReason(option.value)}
+                        className={`flex items-center gap-2 p-3 border-2 transition-colors font-body-md text-sm text-left ${
+                          downtimeReason === option.value
+                            ? 'border-on-background bg-on-background text-surface neo-shadow'
+                            : 'border-on-background bg-surface-container-low hover:bg-surface-container-high'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[18px] shrink-0">{option.icon}</span>
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="flex-1 flex flex-col gap-2">
-                  <label className="font-label-sm text-label-sm uppercase text-on-background">Duration (Minutes)</label>
-                  <input 
-                    type="number" 
-                    value={downtimeMinutes}
-                    onChange={(e) => setDowntimeMinutes(parseInt(e.target.value) || '')}
-                    placeholder="0" 
-                    className="w-full h-[56px] bg-surface border-2 border-on-background neo-shadow-sm focus:outline-none focus:ring-0 rounded-DEFAULT px-4 font-data-lg text-data-lg text-on-background cursor-text" 
-                  />
+
+                {/* Duration: Hours + Minutes */}
+                <div>
+                  <label className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-2">
+                    How long was the downtime?
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-label-sm text-[11px] uppercase text-on-surface-variant">Hours</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        max="24"
+                        value={downtimeHours}
+                        onChange={e => setDowntimeHours(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
+                        placeholder="0"
+                        className="w-full h-16 bg-surface-container-low border-2 border-on-background text-center text-[32px] font-black text-on-background focus:outline-none neo-shadow-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-label-sm text-[11px] uppercase text-on-surface-variant">Minutes</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        max="59"
+                        value={downtimeMins}
+                        onChange={e => setDowntimeMins(e.target.value === '' ? '' : Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                        placeholder="0"
+                        className="w-full h-16 bg-surface-container-low border-2 border-on-background text-center text-[32px] font-black text-on-background focus:outline-none neo-shadow-sm"
+                      />
+                    </div>
+                  </div>
+                  {(Number(downtimeHours) > 0 || Number(downtimeMins) > 0) && (
+                    <p className="mt-2 font-body-md text-sm text-on-surface-variant">
+                      = {(Number(downtimeHours) || 0) * 60 + (Number(downtimeMins) || 0)} total minutes
+                    </p>
+                  )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Dispatched Qty */}
-          <div className="col-span-1 md:col-span-2 bg-surface-container-low border-2 border-on-background neo-shadow p-6 rounded-DEFAULT flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex flex-col gap-2 w-full md:w-1/2">
-              <label className="font-headline-md text-headline-md text-on-background">Dispatched Quantity</label>
-              <p className="font-body-md text-body-md text-on-surface-variant">Number of accepted units sent to central logistics today.</p>
-            </div>
-            <div className="w-full md:w-1/2 flex items-center bg-surface border-2 border-on-background p-2 neo-shadow-sm h-[72px]">
-              <span className="material-symbols-outlined text-on-background px-4">local_shipping</span>
-              <input 
-                type="number" 
-                min="0" 
-                value={dispatchedQty}
-                onChange={(e) => setDispatchedQty(parseInt(e.target.value) || '')}
-                placeholder="Enter amount" 
-                className="w-full h-full bg-transparent border-none focus:ring-0 font-data-lg text-headline-md text-on-background px-2 outline-none" 
-              />
-            </div>
-          </div>
-
           {/* Action Buttons */}
-          <div className="col-span-1 md:col-span-2 flex flex-col md:flex-row gap-4 mt-4">
-            <button type="button" onClick={() => navigate('/')} disabled={submitting} className="flex-1 h-16 bg-surface border-2 border-on-background text-on-background font-headline-md text-headline-md uppercase neo-shadow hover:bg-surface-container-high transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-              <span className="material-symbols-outlined">close</span> Cancel
+          <div className="flex flex-col gap-3 pb-8">
+            <button
+              type="submit"
+              disabled={submitting || !assignment || !isValidTotal}
+              className="w-full h-16 bg-primary-container border-2 border-on-background text-on-primary-container font-headline-md text-headline-md uppercase neo-shadow hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <>
+                  <span className="animate-spin material-symbols-outlined text-[20px]">progress_activity</span>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[20px]">send</span>
+                  Submit Production Log
+                </>
+              )}
             </button>
-            <button type="submit" disabled={submitting || !assignment} className="flex-[2] h-16 bg-primary-container border-2 border-on-background text-on-primary-container font-headline-md text-headline-md uppercase neo-shadow hover:bg-surface-tint transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-              <span className="material-symbols-outlined">send</span> {submitting ? 'Submitting...' : 'Submit Final Log'}
+            <button
+              type="button"
+              onClick={() => navigate('/moulds')}
+              disabled={submitting}
+              className="w-full h-12 bg-surface border-2 border-on-background text-on-background font-label-sm text-label-sm uppercase neo-shadow-sm hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[16px]">close</span>
+              Cancel
             </button>
           </div>
-
         </form>
       </div>
     </div>

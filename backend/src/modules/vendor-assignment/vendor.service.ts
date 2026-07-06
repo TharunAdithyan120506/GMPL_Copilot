@@ -39,6 +39,11 @@ export const VendorService = {
       });
 
       if (data.sharedLoginId?.trim()) {
+        // [FIX: SEC-2] initialPassword is required when creating a vendor login — no defaults
+        if (!data.initialPassword?.trim()) {
+          throw Errors.validation([{ field: 'initialPassword', issue: 'A password is required when creating a vendor login account' }]);
+        }
+
         const vendorRole = await tx.role.findFirst({ where: { companyId: ctx.companyId, key: 'vendor' } });
         if (!vendorRole) throw Errors.internal('Vendor role is not configured');
 
@@ -48,7 +53,7 @@ export const VendorService = {
             roleId: vendorRole.id,
             vendorId: vendor.id,
             loginIdentifier: data.sharedLoginId.trim(),
-            passwordHash: await bcrypt.hash(data.initialPassword || 'password', 10),
+            passwordHash: await bcrypt.hash(data.initialPassword.trim(), 12), // bcrypt rounds: 12 for prod
             isActive: true,
           },
         });

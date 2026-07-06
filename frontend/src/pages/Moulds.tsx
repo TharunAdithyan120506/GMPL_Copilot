@@ -1,7 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+// Removed api import
 import { useAuth } from '../contexts/useAuth';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { MouldRepository } from '../repositories/mould.repository';
+import { VendorRepository } from '../repositories/vendor.repository';
+import { db } from '../lib/db';
+import { SkeletonTable, FreshnessLabel } from '../components/Skeleton';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 
 interface Vendor {
   id: string;
@@ -46,11 +52,22 @@ export function Moulds() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isCompany = user?.role === 'company';
+  const { isOnline } = useSyncStatus();
 
-  const [moulds, setMoulds] = useState<Mould[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── Cache-first: reads IndexedDB instantly, background-refreshes from server ──
+  const { data: moulds, isFirstLoad, lastSyncedAt } = useLiveQuery<Mould>(
+    () => MouldRepository.getAll() as any,
+    (force) => MouldRepository.refresh(force),
+    db.moulds as any,
+    'moulds',
+  );
+
+  const { data: vendors } = useLiveQuery<any>(
+    () => VendorRepository.getAll() as any,
+    (force) => VendorRepository.refresh(force),
+    db.vendors as any,
+  );
+
   const [savingAction, setSavingAction] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -61,26 +78,8 @@ export function Moulds() {
     code: '', name: '', cavityCount: 1, partWeightG: '', runnerWeightG: '', shotLifeLimit: ''
   });
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const requests = isCompany
-        ? [api.get('/moulds'), api.get('/vendors/assignments'), api.get('/vendors')]
-        : [api.get('/moulds'), api.get('/vendors/assignments')];
-      const [mouldsRes, assignmentsRes, vendorsRes] = await Promise.all(requests);
-      setMoulds(mouldsRes.data?.data || []);
-      setAssignments(assignmentsRes.data?.data || []);
-      setVendors(vendorsRes?.data?.data || []);
-    } catch (error) {
-      console.error('Failed to fetch mould master data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [isCompany]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // assignments come embedded in the mould objects from the API/repo
+  const assignments: Assignment[] = (moulds as any[]).flatMap((m: any) => m.assignments || []);
 
   const vendorById = new Map(vendors.map(vendor => [vendor.id, vendor]));
   const assignmentCandidates = [
@@ -142,10 +141,9 @@ export function Moulds() {
         runnerWeightG: Number(formData.runnerWeightG),
         shotLifeLimit: Number(formData.shotLifeLimit)
       };
-      await api.post('/moulds', payload);
+      await MouldRepository.create(payload);
       setShowModal(false);
       setFormData({ code: '', name: '', cavityCount: 1, partWeightG: '', runnerWeightG: '', shotLifeLimit: '' });
-      fetchData();
     } catch (err: any) {
       alert(err.response?.data?.error?.message || 'Error creating mould.');
     }
@@ -154,12 +152,12 @@ export function Moulds() {
   const runLifecycleAction = async (mould: Mould, action: 'move-to-repair' | 'return-to-rotation' | 'retire') => {
     setSavingAction(true);
     try {
-      await api.post(`/moulds/${mould.id}/${action}`);
-      await fetchData();
-      const refreshed = await api.get(`/moulds/${mould.id}`);
-      setSelectedMould(refreshed.data?.data || null);
+      // Queue through MouldRepository → sync engine (works offline too)
+      await MouldRepository.transition(mould.id, action);
+      // Optimistic: close drawer so user doesn't wait
+      setSelectedMould(null);
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to update mould lifecycle.');
+      alert(err.response?.data?.error?.message || 'Failed to queue lifecycle transition.');
     } finally {
       setSavingAction(false);
     }
@@ -179,6 +177,7 @@ export function Moulds() {
               ? 'View mould health by vendor, inspect assignment context, and control lifecycle decisions.'
               : 'Monitor mould condition, material balance, and production logging for your assigned tools.'}
           </p>
+          <FreshnessLabel lastSyncedAt={lastSyncedAt} isOnline={isOnline} className="mt-1" />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-stretch">
@@ -268,8 +267,8 @@ export function Moulds() {
               </tr>
             </thead>
             <tbody className="divide-y-2 divide-on-background">
-              {loading ? (
-                <tr><td colSpan={isCompany ? 6 : 5} className="p-4 text-center font-body-md">Loading moulds...</td></tr>
+              {isFirstLoad ? (
+                <tr><td colSpan={isCompany ? 6 : 5} className="p-4"><SkeletonTable cols={isCompany ? 6 : 5} rows={4} /></td></tr>
               ) : filteredMoulds.length === 0 ? (
                 <tr><td colSpan={isCompany ? 6 : 5} className="p-4 text-center font-body-md">No moulds found.</td></tr>
               ) : (

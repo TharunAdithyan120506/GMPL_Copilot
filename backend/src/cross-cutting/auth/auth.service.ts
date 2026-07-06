@@ -44,11 +44,71 @@ export const AuthService = {
       },
     });
 
-    return { accessToken, refreshToken, user: { id: user.id, role: user.role.key, vendorId: user.vendorId } };
+    return { accessToken, refreshToken, user: { id: user.id, role: user.role.key, vendorId: user.vendorId, permissions } };
   },
 
   async logout(token: string) {
     await prisma.session.deleteMany({ where: { token } });
+  },
+
+  /**
+   * [FIX: AUTH-1] Refresh token rotation:
+   * 1. Validate the refresh token signature and expiry
+   * 2. Look it up in the session table (prevents reuse after logout)
+   * 3. Issue a new access token
+   * 4. Rotate the refresh token (delete old, insert new)
+   */
+  async refresh(refreshToken: string) {
+    // Validate the JWT itself
+    let payload: any;
+    try {
+      const jwt = await import('jsonwebtoken');
+      payload = jwt.default.verify(refreshToken, process.env.JWT_SECRET!);
+    } catch {
+      throw Errors.unauthorized('Refresh token is invalid or expired');
+    }
+
+    if (payload.type !== 'refresh') throw Errors.unauthorized('Not a refresh token');
+
+    // Validate it exists in session store (revocation check)
+    const session = await prisma.session.findFirst({
+      where: { token: refreshToken, expiresAt: { gt: new Date() } },
+    });
+    if (!session) throw Errors.unauthorized('Session not found or expired');
+
+    // Load fresh user context
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: { role: { include: { permissions: { include: { permission: true } } } } },
+    });
+    if (!user || !user.isActive || user.deletedAt) throw Errors.unauthorized();
+
+    const permissions = user.role.permissions.map((rp: any) => rp.permission.key);
+    const authCtx = {
+      userId: user.id,
+      companyId: user.companyId,
+      role: user.role.key as 'company' | 'vendor',
+      vendorId: user.vendorId ?? undefined,
+      permissions,
+    };
+
+    const { signToken, signRefreshToken } = await import('./auth.middleware');
+    const newAccessToken = signToken(authCtx);
+    const newRefreshToken = signRefreshToken(user.id);
+
+    // Rotate: delete old session, create new one
+    await prisma.$transaction([
+      prisma.session.delete({ where: { id: session.id } }),
+      prisma.session.create({
+        data: {
+          userId: user.id,
+          token: newRefreshToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      }),
+    ]);
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   },
 
   async me(userId: string) {

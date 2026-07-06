@@ -6,9 +6,15 @@ import { AuthContext } from '../../shared/types';
 import { error } from '../../shared/response';
 import { prisma } from '../../shared/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
+// [FIX: SEC-3] No hardcoded fallback — crash at startup if secret is missing rather than silently be insecure
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
-export function signToken(payload: AuthContext, expiresIn = '15m') {
+// [FIX: AUTH-1] Extended from 15m to 8h to prevent vendor mid-shift logouts
+// A proper refresh token interceptor should be added to the frontend for production
+export function signToken(payload: AuthContext, expiresIn = '8h') {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn as any });
 }
 

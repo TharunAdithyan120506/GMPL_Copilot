@@ -22,7 +22,7 @@ export function Support() {
               <span className="material-symbols-outlined text-[24px]">email</span>
               <div>
                 <div className="font-label-sm uppercase text-secondary">Email Support</div>
-                <div className="font-data-md font-bold">support@ganesetplast.com</div>
+                <div className="font-data-md font-bold">support@ganesmetplast.com</div>
               </div>
             </div>
             

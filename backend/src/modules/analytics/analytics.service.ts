@@ -9,8 +9,16 @@ export const AnalyticsService = {
     const moulds = await prisma.mould.findMany({ where: { companyId: ctx.companyId, lifecycleState: 'active', deletedAt: null }, select: { shotCountAccumulated: true, shotLifeLimit: true } });
     const nearLimitMoulds = moulds.filter(m => Number(m.shotLifeLimit) > 0 && (Number(m.shotCountAccumulated) / Number(m.shotLifeLimit)) >= 0.9).length;
 
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     const logs = await prisma.dailyProductionLog.findMany({
-      where: { companyId: ctx.companyId, deletedAt: null },
+      where: {
+        companyId: ctx.companyId,
+        deletedAt: null,
+        status: { in: ['submitted', 'corrected'] },
+        logDate: { gte: thirtyDaysAgo },
+      },
       include: { vendor: { select: { id: true, name: true } } },
     });
     

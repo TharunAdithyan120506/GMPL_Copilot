@@ -69,7 +69,7 @@ exports.EditRequestService = {
             throw errors_1.Errors.forbidden('Only company admins can decide on edit requests');
         }
         return prisma_1.prisma.$transaction(async (tx) => {
-            const req = await tx.editRequest.findUnique({
+            const req = await tx.editRequest.findFirst({
                 where: { id, companyId: ctx.companyId },
                 include: { dailyProductionLog: true }
             });

@@ -1,5 +1,11 @@
-import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import { useState } from 'react';
+import { VendorRepository } from '../repositories/vendor.repository';
+import { MouldRepository } from '../repositories/mould.repository';
+import { MaterialRepository } from '../repositories/material.repository';
+import { db } from '../lib/db';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { SkeletonTable, FreshnessLabel } from '../components/Skeleton';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 
 interface Vendor {
   id: string;
@@ -9,52 +15,47 @@ interface Vendor {
 }
 
 export function Vendors() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isOnline } = useSyncStatus();
+
+  // ── Cache-first: reads IndexedDB instantly, background-refreshes from server ──
+  const { data: vendors, isFirstLoad, lastSyncedAt } = useLiveQuery(
+    () => VendorRepository.getAll() as any,
+    (force) => VendorRepository.refresh(force),
+    db.vendors as any,
+    'vendors',
+  );
+
+  const { data: moulds } = useLiveQuery(
+    () => MouldRepository.getAll() as any,
+    (force) => MouldRepository.refresh(force),
+    db.moulds as any,
+  );
+
+  const { data: materials } = useLiveQuery(
+    () => MaterialRepository.getAll() as any,
+    (force) => MaterialRepository.refresh(force),
+    db.materials as any,
+  );
+
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '', sharedLoginId: '', initialPassword: '' });
   const [assignData, setAssignData] = useState({ vendorId: '', mouldId: '', rawMaterialId: '', rmAssignedQty: '' });
   
-  const [moulds, setMoulds] = useState<any[]>([]);
-  const [materials, setMaterials] = useState<any[]>([]);
-
-  const fetchData = async () => {
-    try {
-      const [vendorsRes, mouldsRes, materialsRes] = await Promise.all([
-        api.get('/vendors'),
-        api.get('/moulds'),
-        api.get('/raw-materials')
-      ]);
-      if (vendorsRes.data?.data) setVendors(vendorsRes.data.data);
-      if (mouldsRes.data?.data) setMoulds(mouldsRes.data.data);
-      if (materialsRes.data?.data) setMaterials(materialsRes.data.data);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/vendors', formData);
+      await VendorRepository.create(formData);
       setShowModal(false);
       setFormData({ name: '', code: '', sharedLoginId: '', initialPassword: '' });
-      fetchData();
     } catch (err) {
       console.error('Failed to create vendor:', err);
       alert('Error creating vendor.');
     }
   };
 
-  const filteredVendors = vendors.filter(v => 
+  const filteredVendors = (vendors as Vendor[]).filter(v => 
     (v.code?.toLowerCase().includes(search.toLowerCase()) || '') || 
     v.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -66,10 +67,11 @@ export function Vendors() {
         ...assignData,
         rmAssignedQty: Number(assignData.rmAssignedQty)
       };
-      await api.post('/vendors/assignments', payload);
+      await VendorRepository.assign(payload);
       setShowAssignModal(false);
       setAssignData({ vendorId: '', mouldId: '', rawMaterialId: '', rmAssignedQty: '' });
-      alert('Assignment created successfully!');
+      // Optimistic update alert since it handles via queue
+      alert('Assignment queued successfully!');
     } catch (err) {
       console.error('Failed to assign:', err);
       alert('Error creating assignment.');
@@ -83,6 +85,7 @@ export function Vendors() {
         <div>
           <h2 className="font-display-lg text-display-lg text-on-background leading-none">Vendor Master</h2>
           <p className="font-body-md text-body-md text-on-surface-variant mt-2">Manage vendor profiles and system access credentials.</p>
+          <FreshnessLabel lastSyncedAt={lastSyncedAt} isOnline={isOnline} className="mt-1" />
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-stretch">
@@ -107,50 +110,52 @@ export function Vendors() {
 
       {/* Bento Grid Table Container */}
       <div className="bg-surface border-2 border-on-background neo-shadow flex flex-col overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead className="bg-surface-variant border-b-2 border-on-background">
-              <tr>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-48">Vendor ID / Code</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Company Name</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">System Login ID</th>
-                <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-16 text-center">Act</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y-2 divide-on-background">
-              {loading ? (
-                <tr><td colSpan={4} className="p-4 text-center font-body-md">Loading vendors...</td></tr>
-              ) : filteredVendors.length === 0 ? (
-                <tr><td colSpan={4} className="p-4 text-center font-body-md">No vendors found.</td></tr>
-              ) : (
-                filteredVendors.map(vendor => (
-                  <tr key={vendor.id} className="hover:bg-surface-container-low transition-colors group">
-                    <td className="p-4">
-                      <div className="font-data-md text-data-md text-on-background">{vendor.code || vendor.id.substring(0, 8)}</div>
-                    </td>
-                    <td className="p-4 font-body-md text-body-md text-on-background font-medium">
-                      {vendor.name}
-                    </td>
-                    <td className="p-4 font-data-md text-data-md text-secondary">
-                      {vendor.sharedLoginId || 'Unassigned'}
-                    </td>
-                    <td className="p-4 text-center">
-                      <button 
-                        onClick={() => {
-                          setAssignData(p => ({...p, vendorId: vendor.id}));
-                          setShowAssignModal(true);
-                        }}
-                        className="bg-surface-variant text-on-background border-2 border-on-background px-3 py-1 neo-shadow-sm font-label-sm text-label-sm uppercase hover:neo-active whitespace-nowrap"
-                      >
-                        Assign
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {isFirstLoad ? (
+          <SkeletonTable cols={4} rows={6} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead className="bg-surface-variant border-b-2 border-on-background">
+                <tr>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-48">Vendor ID / Code</th>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Company Name</th>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">System Login ID</th>
+                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest w-16 text-center">Act</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y-2 divide-on-background">
+                {filteredVendors.length === 0 ? (
+                  <tr><td colSpan={4} className="p-4 text-center font-body-md">No vendors found.</td></tr>
+                ) : (
+                  filteredVendors.map(vendor => (
+                    <tr key={vendor.id} className="hover:bg-surface-container-low transition-colors group">
+                      <td className="p-4">
+                        <div className="font-data-md text-data-md text-on-background">{vendor.code || vendor.id.substring(0, 8)}</div>
+                      </td>
+                      <td className="p-4 font-body-md text-body-md text-on-background font-medium">
+                        {vendor.name}
+                      </td>
+                      <td className="p-4 font-data-md text-data-md text-secondary">
+                        {vendor.sharedLoginId || 'Unassigned'}
+                      </td>
+                      <td className="p-4 text-center">
+                        <button 
+                          onClick={() => {
+                            setAssignData(p => ({...p, vendorId: vendor.id}));
+                            setShowAssignModal(true);
+                          }}
+                          className="bg-surface-variant text-on-background border-2 border-on-background px-3 py-1 neo-shadow-sm font-label-sm text-label-sm uppercase hover:neo-active whitespace-nowrap"
+                        >
+                          Assign
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
         {/* Table Footer */}
         <div className="bg-surface-variant border-t-2 border-on-background p-4 flex justify-between items-center">
           <span className="font-body-md text-body-md text-on-surface-variant">Showing {vendors.length} entries</span>
@@ -240,8 +245,27 @@ export function Vendors() {
                   className="w-full bg-surface-container-low border-2 border-on-background p-3 focus:outline-none"
                 >
                   <option value="">Select a Mould...</option>
-                  {moulds.map(m => <option key={m.id} value={m.id}>{m.code} - {m.name}</option>)}
+                  {(moulds as any[])
+                    .filter(m => {
+                      // Exclude moulds that already have an active assignment
+                      const hasActiveAssignment = (m.assignments || []).some(
+                        (a: any) => a.status === 'active'
+                      );
+                      return !hasActiveAssignment;
+                    })
+                    .map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.code} - {m.name}
+                      </option>
+                    ))
+                  }
                 </select>
+                {/* Hint when all moulds are assigned */}
+                {(moulds as any[]).every(m => (m.assignments || []).some((a: any) => a.status === 'active')) && (
+                  <p className="mt-1 font-label-sm text-[11px] text-warning">
+                    All moulds are currently assigned. End an existing assignment first.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="font-label-sm uppercase text-secondary block mb-1">Raw Material</label>
@@ -252,7 +276,7 @@ export function Vendors() {
                   className="w-full bg-surface-container-low border-2 border-on-background p-3 focus:outline-none"
                 >
                   <option value="">Select Raw Material...</option>
-                  {materials.map(m => <option key={m.id} value={m.id}>{m.code} - {m.name}</option>)}
+                  {(materials as any[]).map(m => <option key={m.id} value={m.id}>{m.code} - {m.name}</option>)}
                 </select>
               </div>
               <div>

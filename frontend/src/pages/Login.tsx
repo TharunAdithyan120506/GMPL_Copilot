@@ -27,7 +27,9 @@ export function Login() {
       });
       
       if (res.data && res.data.data) {
-        const { accessToken, user } = res.data.data;
+        const { accessToken, refreshToken, user } = res.data.data;
+        // [FIX: AUTH-1] Store refresh token so the silent refresh interceptor can use it
+        if (refreshToken) localStorage.setItem('gmpl_refresh_token', refreshToken);
         login(accessToken, user);
         navigate('/');
       }
@@ -48,7 +50,8 @@ export function Login() {
       const pw = role === 'company' ? 'admin123' : 'password';
       const res = await api.post('/auth/login', { loginIdentifier: identifier, password: pw });
       if (res.data && res.data.data) {
-        const { accessToken, user } = res.data.data;
+        const { accessToken, refreshToken, user } = res.data.data;
+        if (refreshToken) localStorage.setItem('gmpl_refresh_token', refreshToken);
         login(accessToken, user);
         navigate('/');
       }

@@ -9,8 +9,15 @@ exports.AnalyticsService = {
         const lowRmStock = await prisma_1.prisma.assignment.count({ where: { companyId: ctx.companyId, status: 'active', deletedAt: null, rmRemainingQty: { lt: 100 } } });
         const moulds = await prisma_1.prisma.mould.findMany({ where: { companyId: ctx.companyId, lifecycleState: 'active', deletedAt: null }, select: { shotCountAccumulated: true, shotLifeLimit: true } });
         const nearLimitMoulds = moulds.filter(m => Number(m.shotLifeLimit) > 0 && (Number(m.shotCountAccumulated) / Number(m.shotLifeLimit)) >= 0.9).length;
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const logs = await prisma_1.prisma.dailyProductionLog.findMany({
-            where: { companyId: ctx.companyId, deletedAt: null },
+            where: {
+                companyId: ctx.companyId,
+                deletedAt: null,
+                status: { in: ['submitted', 'corrected'] },
+                logDate: { gte: thirtyDaysAgo },
+            },
             include: { vendor: { select: { id: true, name: true } } },
         });
         // Downtime Aggregates

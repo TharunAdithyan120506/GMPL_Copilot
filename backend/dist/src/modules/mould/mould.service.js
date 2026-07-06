@@ -87,10 +87,20 @@ exports.MouldService = {
         });
     },
     async transitionState(ctx, id, toState, eventType) {
+        const VALID_TRANSITIONS = {
+            active: ['in_repair', 'flagged_for_replacement', 'retired'],
+            flagged_for_replacement: ['in_repair', 'retired'],
+            in_repair: ['active'],
+            retired: [], // terminal state — no transitions out
+        };
         return prisma_1.prisma.$transaction(async (tx) => {
             const mould = await tx.mould.findUnique({ where: { id, companyId: ctx.companyId } });
             if (!mould || mould.deletedAt)
                 throw errors_1.Errors.notFound('Mould');
+            const allowedTargets = VALID_TRANSITIONS[mould.lifecycleState] || [];
+            if (!allowedTargets.includes(toState)) {
+                throw errors_1.Errors.stateTransition(`Cannot transition mould from '${mould.lifecycleState}' to '${toState}'`);
+            }
             const updated = await tx.mould.update({
                 where: { id },
                 data: { lifecycleState: toState, updatedBy: ctx.userId },

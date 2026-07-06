@@ -77,7 +77,7 @@ export const EditRequestService = {
     }
 
     return prisma.$transaction(async (tx) => {
-      const req = await tx.editRequest.findUnique({
+      const req = await tx.editRequest.findFirst({
         where: { id, companyId: ctx.companyId },
         include: { dailyProductionLog: true }
       });

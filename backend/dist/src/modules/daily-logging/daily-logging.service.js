@@ -47,7 +47,7 @@ exports.DailyLoggingService = {
                         assignmentId: assignment.id,
                         mouldId: assignment.mouldId,
                         logDate: new Date(data.logDate),
-                        shotsRun: data.shotsRun,
+                        shotsRun: 0n, // System-computed at submit time, never from client
                         acceptedQty: data.acceptedQty,
                         rejectedQty: data.rejectedQty,
                         dispatchedQty: data.dispatchedQty,

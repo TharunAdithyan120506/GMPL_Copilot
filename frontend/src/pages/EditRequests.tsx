@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import { useState } from 'react';
 import { useAuth } from '../contexts/useAuth';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { EditRequestRepository } from '../repositories/editRequest.repository';
+import { db } from '../lib/db';
+import { SkeletonTable, FreshnessLabel } from '../components/Skeleton';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 
 interface EditRequest {
   id: string;
@@ -22,36 +26,26 @@ interface EditRequest {
 }
 
 export function EditRequests() {
-  const [requests, setRequests] = useState<EditRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actioningId, setActioningId] = useState<string | null>(null);
   const { user } = useAuth();
   const isCompany = user?.role === 'company';
+  const { isOnline } = useSyncStatus();
 
-  const fetchRequests = async () => {
-    try {
-      const res = await api.get('/edit-requests');
-      if (res.data && res.data.data) {
-        setRequests(res.data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch edit requests:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ── Cache-first: reads IndexedDB instantly, background-refreshes from server ──
+  const { data: requests, isFirstLoad, lastSyncedAt } = useLiveQuery(
+    () => EditRequestRepository.getAll() as any,
+    (force) => EditRequestRepository.refresh(force),
+    db.editRequests as any,
+    'editRequests',
+  );
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  const [actioningId, setActioningId] = useState<string | null>(null);
 
   const handleDecide = async (id: string, status: 'approved' | 'rejected') => {
     if (!isCompany) return;
     
     setActioningId(id);
     try {
-      await api.post(`/edit-requests/${id}/decide`, { status });
-      await fetchRequests(); // refresh list
+      await EditRequestRepository.decide(id, status);
     } catch (error) {
       console.error('Failed to update request:', error);
       alert('Failed to update request.');
@@ -73,10 +67,11 @@ export function EditRequests() {
               ? 'Review vendor edit requests for production logs and material usage.'
               : 'Track the status of your requested log adjustments.'}
           </p>
+          <FreshnessLabel lastSyncedAt={lastSyncedAt} isOnline={isOnline} className="mt-1" />
         </div>
         <div className="flex items-center gap-4 bg-surface border-2 border-on-background p-1 neo-shadow-sm">
           <button className="bg-primary-container text-on-primary-container font-label-sm text-label-sm px-6 py-2 border-2 border-transparent">
-            Pending ({requests.filter(r => r.status === 'pending').length})
+            Pending ({requests.filter((r: any) => r.status === 'pending').length})
           </button>
           <button className="text-on-surface-variant hover:bg-surface-container-low font-label-sm text-label-sm px-6 py-2 transition-colors">
             History
@@ -86,12 +81,12 @@ export function EditRequests() {
 
       {/* Approval Queue List */}
       <div className="flex flex-col gap-bento-gap">
-        {loading ? (
-          <div className="p-4 font-body-md">Loading requests...</div>
+        {isFirstLoad ? (
+          <SkeletonTable cols={3} rows={4} />
         ) : requests.length === 0 ? (
           <div className="p-4 font-body-md bg-surface border-2 border-on-background">No edit requests found.</div>
         ) : (
-          requests.map(req => {
+          (requests as EditRequest[]).map(req => {
             const isPending = req.status === 'pending';
             return (
               <div key={req.id} className={`bg-surface border-2 border-on-background p-6 neo-shadow ${!isPending ? 'opacity-70' : ''}`}>
