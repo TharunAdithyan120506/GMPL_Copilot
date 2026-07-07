@@ -15,7 +15,7 @@ import { drain as pushDrain } from './push';
 import { onReconnect } from './network';
 import { connectivity } from '../lib/connectivity';
 
-const PERIODIC_INTERVAL_MS = 60_000;   // 1 minute — full pull
+const PERIODIC_INTERVAL_MS = 15_000;   // 15 seconds — safety net for missed jobs
 const DASHBOARD_INTERVAL_MS = 30_000;  // 30 sec — dashboard-only
 
 class SyncScheduler {

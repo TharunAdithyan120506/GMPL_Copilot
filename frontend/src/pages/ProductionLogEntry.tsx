@@ -6,6 +6,8 @@ import { MouldRepository } from '../repositories/mould.repository';
 import { LogRepository } from '../repositories/log.repository';
 import { db } from '../lib/db';
 import { SkeletonCard } from '../components/Skeleton';
+import { useToast } from '../hooks/useToast';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export function ProductionLogEntry() {
   const [searchParams] = useSearchParams();
@@ -24,6 +26,8 @@ export function ProductionLogEntry() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { toast } = useToast();
 
   const [acceptedQty, setAcceptedQty] = useState<number | ''>('');
   const [rejectedQty, setRejectedQty] = useState<number | ''>('');
@@ -60,30 +64,41 @@ export function ProductionLogEntry() {
     }
   }, [acceptedQty, rejectedQty, dispatchedQty, downtime, downtimeHours, downtimeMins, downtimeReason, draftRestored, saveDraft]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignment || !mould) return;
 
     const accepted = Number(acceptedQty) || 0;
     const rejected = Number(rejectedQty) || 0;
 
-    setSubmitting(true);
     setError('');
 
     const totalParts = accepted + rejected;
     const cavityCount = Number(mould.cavityCount) || 1;
     if (totalParts === 0) {
-      setError('Please enter at least one accepted or rejected part.');
-      setSubmitting(false);
+      const msg = 'Please enter at least one accepted or rejected part.';
+      setError(msg);
+      toast.warning(msg);
       return;
     }
     if (totalParts % cavityCount !== 0) {
-      setError(`Total parts (${totalParts}) must be divisible by cavity count (${cavityCount}).`);
-      setSubmitting(false);
+      const msg = `Total parts (${totalParts}) must be divisible by cavity count (${cavityCount}).`;
+      setError(msg);
+      toast.warning(msg);
       return;
     }
 
-    // Convert hours + minutes to total minutes for the backend
+    setConfirmOpen(true);
+  };
+
+  const executeSubmit = async () => {
+    if (!assignment || !mould) return;
+    const accepted = Number(acceptedQty) || 0;
+    const rejected = Number(rejectedQty) || 0;
+
+    setSubmitting(true);
+    setConfirmOpen(false);
+
     const totalDowntimeMinutes = downtime
       ? (Number(downtimeHours) || 0) * 60 + (Number(downtimeMins) || 0)
       : 0;
@@ -105,9 +120,12 @@ export function ProductionLogEntry() {
       await LogRepository.submitLog(tempId, idempotencyKey);
 
       await clearDraft();
+      toast.success('Production log submitted and queued for sync!');
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to submit log. Please try again.');
+      const msg = err.message || 'Failed to submit log. Please try again.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -172,7 +190,7 @@ export function ProductionLogEntry() {
           </div>
         )}
 
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-5" onSubmit={handlePreSubmit}>
 
           {/* Accepted Qty — BIG tap-friendly input */}
           <div className="bg-surface border-2 border-on-background neo-shadow p-5">
@@ -367,7 +385,7 @@ export function ProductionLogEntry() {
               ) : (
                 <>
                   <span className="material-symbols-outlined text-[20px]">send</span>
-                  Submit Production Log
+                  Review & Submit Log
                 </>
               )}
             </button>
@@ -383,6 +401,18 @@ export function ProductionLogEntry() {
           </div>
         </form>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        severity="info"
+        title="Confirm Production Log"
+        description={`Please verify today's numbers for mould "${assignment.mould?.code || mould?.code}":\n• Accepted: ${acceptedQty} parts\n• Rejected: ${rejectedQty} parts\n• Total Yield: ${Number(acceptedQty || 0) + Number(rejectedQty || 0)} parts\n• Dispatched: ${dispatchedQty || 0} units${downtime ? `\n• Downtime: ${(Number(downtimeHours) || 0) * 60 + (Number(downtimeMins) || 0)} minutes (${downtimeReason})` : ''}`}
+        confirmLabel="Confirm & Submit"
+        cancelLabel="Edit Numbers"
+        loading={submitting}
+        onConfirm={executeSubmit}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

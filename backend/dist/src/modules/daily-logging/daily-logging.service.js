@@ -160,20 +160,29 @@ exports.DailyLoggingService = {
                 where: { id },
                 data: {
                     status: 'submitted',
-                    shotsRun: calculatedShotsRun,
+                    shotsRun: BigInt(calculatedShotsRun), // [FIX: LOG-2] Must be BigInt — not plain Number
                     shotWeightGSnapshot: shotWeightG,
                     rmConsumedQty: rmConsumedKg,
                     rmIrrecoverableLossQty: irrecoverableLossKg,
                     updatedBy: ctx.userId,
                 },
             });
+            // [FIX: INT-1] Guard against RM balance going negative before decrementing
+            const totalDeduction = rmConsumedKg + irrecoverableLossKg;
+            if (Number(assignment.rmRemainingQty) < totalDeduction) {
+                throw {
+                    code: 'VALIDATION_ERROR',
+                    message: `Insufficient raw material. This log would consume ${totalDeduction.toFixed(3)} kg but only ${Number(assignment.rmRemainingQty).toFixed(3)} kg remains in the assignment.`,
+                    status: 400,
+                };
+            }
             // 5. Decrement assignment balances
             await tx.assignment.update({
                 where: { id: assignment.id },
                 data: {
                     rmConsumedQty: { increment: rmConsumedKg },
                     rmIrrecoverableLossQty: { increment: irrecoverableLossKg },
-                    rmRemainingQty: { decrement: (rmConsumedKg + irrecoverableLossKg) },
+                    rmRemainingQty: { decrement: totalDeduction },
                     updatedBy: ctx.userId,
                 },
             });

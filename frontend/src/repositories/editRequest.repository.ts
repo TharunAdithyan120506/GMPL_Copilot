@@ -20,14 +20,14 @@ export const EditRequestRepository = {
   },
 
   /** Approve or reject an edit request — queued as state-machine transition */
-  async decide(requestId: string, status: 'approved' | 'rejected'): Promise<void> {
+  async decide(requestId: string, status: 'approved' | 'rejected', decisionNote?: string): Promise<void> {
     // Optimistic local update
     await db.editRequests.update(requestId, { status, _isOptimistic: true });
 
     await syncQueue.enqueue({
       method: 'POST',
       endpoint: `/edit-requests/${requestId}/decide`,
-      payload: { status },
+      payload: { status, ...(decisionNote?.trim() ? { decisionNote: decisionNote.trim() } : {}) },
       entityType: 'editRequest',
       entityId: requestId,
       operation: 'TRANSITION',

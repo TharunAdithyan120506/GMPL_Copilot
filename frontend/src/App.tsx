@@ -19,6 +19,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SyncProvider } from './contexts/SyncContext';
 import { useAuth } from './contexts/useAuth';
 import { OfflineBanner } from './components/OfflineBanner';
+import { ToastProvider } from './hooks/useToast';
+import { ToastContainer } from './components/Toast';
 
 // SyncDevPanel is lazy-loaded and completely tree-shaken in production builds
 const SyncDevPanel = import.meta.env.DEV
@@ -61,6 +63,8 @@ function AppRoutes() {
           <Route path="support" element={<Support />} />
         </Route>
       </Routes>
+      {/* Global toast notifications — rendered at root level */}
+      <ToastContainer />
     </>
   );
 }
@@ -83,9 +87,11 @@ function AuthenticatedSyncProvider({ children }: { children: React.ReactNode }) 
 export default function App() {
   return (
     <AuthProvider>
-      <AuthenticatedSyncProvider>
-        <AppRoutes />
-      </AuthenticatedSyncProvider>
+      <ToastProvider>
+        <AuthenticatedSyncProvider>
+          <AppRoutes />
+        </AuthenticatedSyncProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

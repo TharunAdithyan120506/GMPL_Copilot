@@ -41,4 +41,18 @@ router.get('/me', auth_middleware_1.authenticate, async (req, res) => {
         return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 500);
     }
 });
+// [FIX: AUTH-1] POST /api/v1/auth/refresh — silent token rotation
+// Frontend should call this when access token is near expiry to avoid mid-session logouts
+router.post('/refresh', async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken)
+            return (0, response_1.error)(res, 'VALIDATION_ERROR', 'refreshToken is required', 422);
+        const result = await auth_service_1.AuthService.refresh(refreshToken);
+        return (0, response_1.success)(res, result);
+    }
+    catch (err) {
+        return (0, response_1.error)(res, err.code || 'INTERNAL', err.message, err.status || 401);
+    }
+});
 exports.default = router;

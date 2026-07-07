@@ -5,6 +5,7 @@ import { MaterialRepository } from '../repositories/material.repository';
 import { db } from '../lib/db';
 import { SkeletonTable, FreshnessLabel } from '../components/Skeleton';
 import { useSyncStatus } from '../hooks/useSyncStatus';
+import { useToast } from '../hooks/useToast';
 
 interface RawMaterial {
   id: string;
@@ -17,6 +18,7 @@ interface RawMaterial {
 
 export function Materials() {
   const { isOnline } = useSyncStatus();
+  const { toast } = useToast();
 
   // ── Cache-first: reads IndexedDB instantly, background-refreshes from server ──
   const { data: materials, isFirstLoad, lastSyncedAt, refresh } = useLiveQuery(
@@ -30,6 +32,7 @@ export function Materials() {
   const [formData, setFormData] = useState({ code: '', name: '', unit: 'kg' });
   const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
   const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const openCreateModal = () => {
     setEditingMaterial(null);
@@ -45,24 +48,22 @@ export function Materials() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     try {
       if (editingMaterial) {
-        await api.patch(`/raw-materials/${editingMaterial.id}`, {
-          name: formData.name,
-          unit: formData.unit,
-        });
+        await api.patch(`/raw-materials/${editingMaterial.id}`, { name: formData.name, unit: formData.unit });
+        toast.success(`Material "${formData.name}" updated.`);
       } else {
         await api.post('/raw-materials', formData);
+        toast.success(`Material "${formData.name}" created.`);
       }
       setShowModal(false);
       setEditingMaterial(null);
       setFormData({ code: '', name: '', unit: 'kg' });
-      // Force re-pull to update cache
       refresh();
     } catch (err) {
-      console.error('Failed to save material', err);
-      alert('Error saving material. Code might already exist.');
-    }
+      toast.error('Error saving material. The code may already exist.');
+    } finally { setSaving(false); }
   };
 
   const filteredMaterials = (materials as RawMaterial[]).filter(m =>
@@ -99,50 +100,64 @@ export function Materials() {
 
       {isFirstLoad ? (
         <SkeletonTable cols={5} rows={6} />
-      ) : (
-        <div className="bg-surface border-2 border-on-background neo-shadow flex flex-col overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
-              <thead className="bg-surface-variant border-b-2 border-on-background">
-                <tr>
-                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Code & Name</th>
-                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-right">Available (kg)</th>
-                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-right">Allocated (kg)</th>
-                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Status</th>
-                  <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-on-background">
-                {filteredMaterials.length === 0 ? (
-                  <tr><td colSpan={5} className="p-4 text-center font-body-md text-on-surface-variant">No materials found.</td></tr>
-                ) : filteredMaterials.map((mat) => (
-                  <tr key={mat.id} className="hover:bg-surface-container-low transition-colors">
-                    <td className="p-4 font-body-md text-body-md text-on-background">
-                      <div className="font-bold">{mat.code}</div>
-                      <div className="text-secondary text-sm">{mat.name}</div>
-                    </td>
-                    <td className="p-4 font-data-md text-data-md text-right">
-                      {Number(mat.availableQty || 0).toLocaleString()}
-                    </td>
-                    <td className="p-4 font-data-md text-data-md text-right text-secondary">
-                      {Number(mat.allocatedQty || 0).toLocaleString()}
-                    </td>
-                    <td className="p-4">
-                      <span className="border-2 border-on-background bg-surface-variant px-2 py-1 font-label-sm text-label-sm uppercase">
-                        Tracked
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <button onClick={() => openEditModal(mat)} className="bg-surface-variant text-on-background border-2 border-on-background px-3 py-1 neo-shadow-sm font-label-sm text-label-sm uppercase hover:neo-active">
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      ) : filteredMaterials.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-on-surface-variant bg-surface border-2 border-on-background">
+          <span className="material-symbols-outlined text-[56px]">inventory_2</span>
+          <p className="font-body-md text-body-md">No materials found.</p>
         </div>
+      ) : (
+        <>
+          {/* Mobile: card layout */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {filteredMaterials.map(mat => (
+              <div key={mat.id} className="bg-surface border-2 border-on-background neo-shadow-sm p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-data-md text-data-md font-bold text-on-background">{mat.code}</div>
+                    <div className="font-body-md text-body-md text-on-surface-variant">{mat.name}</div>
+                  </div>
+                  <button onClick={() => openEditModal(mat)} className="shrink-0 bg-surface-variant text-on-background border-2 border-on-background px-3 py-1 neo-shadow-sm font-label-sm text-label-sm uppercase hover:neo-active">
+                    Edit
+                  </button>
+                </div>
+                <div className="flex gap-4 mt-3 pt-3 border-t-2 border-on-background">
+                  <div><span className="font-label-sm text-label-sm text-on-surface-variant block">Available</span><span className="font-data-md text-data-md">{Number(mat.availableQty || 0).toLocaleString()} {mat.unit}</span></div>
+                  <div><span className="font-label-sm text-label-sm text-on-surface-variant block">Allocated</span><span className="font-data-md text-data-md text-secondary">{Number(mat.allocatedQty || 0).toLocaleString()} {mat.unit}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden md:block bg-surface border-2 border-on-background neo-shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead className="bg-surface-variant border-b-2 border-on-background">
+                  <tr>
+                    <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Code & Name</th>
+                    <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-right">Available</th>
+                    <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-right">Allocated</th>
+                    <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest">Status</th>
+                    <th className="p-4 font-label-sm text-label-sm text-on-background uppercase tracking-widest text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y-2 divide-on-background">
+                  {filteredMaterials.map(mat => (
+                    <tr key={mat.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="p-4"><div className="font-bold">{mat.code}</div><div className="text-secondary text-sm">{mat.name}</div></td>
+                      <td className="p-4 font-data-md text-data-md text-right">{Number(mat.availableQty || 0).toLocaleString()}</td>
+                      <td className="p-4 font-data-md text-data-md text-right text-secondary">{Number(mat.allocatedQty || 0).toLocaleString()}</td>
+                      <td className="p-4"><span className="border-2 border-on-background bg-surface-variant px-2 py-1 font-label-sm text-label-sm uppercase">Tracked</span></td>
+                      <td className="p-4 text-center">
+                        <button onClick={() => openEditModal(mat)} className="bg-surface-variant text-on-background border-2 border-on-background px-3 py-1 neo-shadow-sm font-label-sm text-label-sm uppercase hover:neo-active">Edit</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Modal */}
@@ -190,7 +205,8 @@ export function Materials() {
                   className="w-full bg-surface-container-low border-2 border-on-background p-3 focus:outline-none focus:shadow-[4px_4px_0px_#1A1A1A]"
                 />
               </div>
-              <button type="submit" className="mt-4 bg-primary text-on-primary border-2 border-on-background p-3 uppercase font-bold neo-shadow-sm hover:neo-active">
+              <button disabled={saving} type="submit" className="mt-4 bg-primary text-on-primary border-2 border-on-background p-3 uppercase font-bold neo-shadow-sm hover:neo-active disabled:opacity-50 flex items-center justify-center gap-2">
+                {saving && <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                 {editingMaterial ? 'Save Material' : 'Create Material'}
               </button>
             </form>

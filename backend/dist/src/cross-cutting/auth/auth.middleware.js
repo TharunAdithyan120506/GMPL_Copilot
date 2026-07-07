@@ -11,8 +11,14 @@ exports.scopeVendor = scopeVendor;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = require("crypto");
 const response_1 = require("../../shared/response");
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
-function signToken(payload, expiresIn = '15m') {
+// [FIX: SEC-3] No hardcoded fallback — crash at startup if secret is missing rather than silently be insecure
+if (!process.env.JWT_SECRET) {
+    throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+// [FIX: AUTH-1] Extended from 15m to 8h to prevent vendor mid-shift logouts
+// A proper refresh token interceptor should be added to the frontend for production
+function signToken(payload, expiresIn = '8h') {
     return jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: expiresIn });
 }
 function signRefreshToken(userId) {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 // Removed api import
 import { useAuth } from '../contexts/useAuth';
@@ -8,6 +8,8 @@ import { VendorRepository } from '../repositories/vendor.repository';
 import { db } from '../lib/db';
 import { SkeletonTable, FreshnessLabel } from '../components/Skeleton';
 import { useSyncStatus } from '../hooks/useSyncStatus';
+import { useToast } from '../hooks/useToast';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface Vendor {
   id: string;
@@ -53,6 +55,7 @@ export function Moulds() {
   const navigate = useNavigate();
   const isCompany = user?.role === 'company';
   const { isOnline } = useSyncStatus();
+  const { toast } = useToast();
 
   // ── Cache-first: reads IndexedDB instantly, background-refreshes from server ──
   const { data: moulds, isFirstLoad, lastSyncedAt } = useLiveQuery<Mould>(
@@ -100,6 +103,17 @@ export function Moulds() {
   );
   const assignmentByMould = new Map(activeAssignments.map(a => [a.mouldId, a]));
 
+  // ESC key: close detail drawer and create modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showModal) { setShowModal(false); return; }
+      if (selectedMould) { setSelectedMould(null); return; }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showModal, selectedMould]);
+
   const vendorSummaries = vendors.map(vendor => {
     const vendorAssignments = activeAssignments.filter(a => a.vendorId === vendor.id);
     const vendorMoulds = vendorAssignments
@@ -144,20 +158,65 @@ export function Moulds() {
       await MouldRepository.create(payload);
       setShowModal(false);
       setFormData({ code: '', name: '', cavityCount: 1, partWeightG: '', runnerWeightG: '', shotLifeLimit: '' });
+      toast.success(`Mould "${payload.code}" created successfully.`);
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Error creating mould.');
+      toast.error(err.response?.data?.error?.message || 'Error creating mould.');
     }
+  };
+
+  // Confirm state for retire (irreversible) and move-to-repair
+  const [lifecycleConfirm, setLifecycleConfirm] = useState<{
+    open: boolean;
+    mould: Mould | null;
+    action: 'move-to-repair' | 'return-to-rotation' | 'retire';
+  }>({ open: false, mould: null, action: 'retire' });
+
+  // Confirm state for revoking assignment
+  const [revokeConfirm, setRevokeConfirm] = useState<{
+    open: boolean;
+    assignmentId: string;
+    mouldName: string;
+    vendorName: string;
+  }>({ open: false, assignmentId: '', mouldName: '', vendorName: '' });
+
+  const promptLifecycle = (mould: Mould, action: 'move-to-repair' | 'return-to-rotation' | 'retire') => {
+    if (action === 'return-to-rotation') {
+      // No confirmation needed — easily reversible
+      runLifecycleAction(mould, action);
+      return;
+    }
+    setLifecycleConfirm({ open: true, mould, action });
   };
 
   const runLifecycleAction = async (mould: Mould, action: 'move-to-repair' | 'return-to-rotation' | 'retire') => {
     setSavingAction(true);
+    setLifecycleConfirm({ open: false, mould: null, action: 'retire' });
     try {
-      // Queue through MouldRepository → sync engine (works offline too)
       await MouldRepository.transition(mould.id, action);
-      // Optimistic: close drawer so user doesn't wait
       setSelectedMould(null);
+      const label = action === 'retire' ? 'retired permanently' : action === 'move-to-repair' ? 'moved to repair' : 'returned to rotation';
+      toast.success(`Mould ${mould.code || mould.name} ${label}.`);
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to queue lifecycle transition.');
+      toast.error(err.response?.data?.error?.message || 'Failed to queue lifecycle transition.');
+    } finally {
+      setSavingAction(false);
+    }
+  };
+
+  const runRevokeAssignment = async (assignmentId: string, mouldName: string) => {
+    setRevokeConfirm({ open: false, assignmentId: '', mouldName: '', vendorName: '' });
+    setSavingAction(true);
+    try {
+      await MouldRepository.revokeAssignment(assignmentId);
+      setSelectedMould(null);
+      toast.success(`Assignment for ${mouldName} revoked — queued for sync.`, {
+        action: {
+          label: 'Undo',
+          onClick: () => toast.info('Undo is not yet available for synced operations. Contact admin if needed.'),
+        },
+      });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || 'Failed to revoke assignment.');
     } finally {
       setSavingAction(false);
     }
@@ -377,18 +436,34 @@ export function Moulds() {
                   <h4 className="font-headline-md text-headline-md mb-3">Company Decisions</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedMould.lifecycleState !== 'in_repair' && selectedMould.lifecycleState !== 'retired' && (
-                      <button disabled={savingAction} onClick={() => runLifecycleAction(selectedMould, 'move-to-repair')} className="border-2 border-on-background bg-warning px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
+                      <button disabled={savingAction} onClick={() => promptLifecycle(selectedMould, 'move-to-repair')} className="border-2 border-on-background bg-warning px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
                         Move to Repair
                       </button>
                     )}
                     {selectedMould.lifecycleState === 'in_repair' && (
-                      <button disabled={savingAction} onClick={() => runLifecycleAction(selectedMould, 'return-to-rotation')} className="border-2 border-on-background bg-success text-on-primary px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
+                      <button disabled={savingAction} onClick={() => promptLifecycle(selectedMould, 'return-to-rotation')} className="border-2 border-on-background bg-success text-on-primary px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
                         Return Active
                       </button>
                     )}
                     {selectedMould.lifecycleState !== 'retired' && (
-                      <button disabled={savingAction} onClick={() => runLifecycleAction(selectedMould, 'retire')} className="border-2 border-on-background bg-danger text-on-error px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50">
+                      <button disabled={savingAction} onClick={() => promptLifecycle(selectedMould, 'retire')} className="border-2 border-on-background bg-danger text-on-error px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50 flex items-center gap-2">
+                        <span className="material-symbols-outlined fill-icon text-[16px]">warning</span>
                         Retire Mould
+                      </button>
+                    )}
+                    {selectedAssignment && (
+                      <button
+                        onClick={() => setRevokeConfirm({
+                          open: true,
+                          assignmentId: selectedAssignment.id,
+                          mouldName: selectedMould.code || selectedMould.name,
+                          vendorName: getVendorLabel(selectedAssignment),
+                        })}
+                        disabled={savingAction}
+                        className="border-2 border-on-background bg-surface text-danger px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50 hover:bg-error-container/20 flex items-center gap-2"
+                      >
+                        <span className="material-symbols-outlined fill-icon text-[16px]">link_off</span>
+                        Revoke Assignment
                       </button>
                     )}
                     {selectedAssignment && (
@@ -459,6 +534,34 @@ export function Moulds() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={lifecycleConfirm.open}
+        severity={lifecycleConfirm.action === 'retire' ? 'danger' : 'warning'}
+        title={lifecycleConfirm.action === 'retire' ? 'Retire This Mould Permanently?' : 'Move Mould to Repair?'}
+        description={
+          lifecycleConfirm.action === 'retire'
+            ? `Are you sure you want to retire "${lifecycleConfirm.mould?.code || lifecycleConfirm.mould?.name}"? A retired mould can no longer be assigned to vendors or used in production logs. This is irreversible.`
+            : `Are you sure you want to move "${lifecycleConfirm.mould?.code || lifecycleConfirm.mould?.name}" to repair? This will flag it as undergoing maintenance.`
+        }
+        confirmLabel={lifecycleConfirm.action === 'retire' ? 'Yes, Retire Mould' : 'Move to Repair'}
+        cancelLabel="Cancel"
+        loading={savingAction}
+        onConfirm={() => lifecycleConfirm.mould && runLifecycleAction(lifecycleConfirm.mould, lifecycleConfirm.action)}
+        onCancel={() => setLifecycleConfirm({ open: false, mould: null, action: 'retire' })}
+      />
+
+      <ConfirmDialog
+        open={revokeConfirm.open}
+        severity="warning"
+        title="Revoke Vendor Assignment?"
+        description={`Removing the assignment of "${revokeConfirm.mouldName}" from "${revokeConfirm.vendorName}" will stop material tracking for this mould at that vendor. The vendor will no longer be able to log production for this mould.`}
+        confirmLabel="Revoke Assignment"
+        cancelLabel="Cancel"
+        loading={savingAction}
+        onConfirm={() => runRevokeAssignment(revokeConfirm.assignmentId, revokeConfirm.mouldName)}
+        onCancel={() => setRevokeConfirm({ open: false, assignmentId: '', mouldName: '', vendorName: '' })}
+      />
     </div>
   );
 }

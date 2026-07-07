@@ -32,6 +32,19 @@ export const MouldRepository = {
     });
   },
 
+  /** Queue revocation of a specific vendor assignment */
+  async revokeAssignment(assignmentId: string): Promise<void> {
+    await syncQueue.enqueue({
+      method: 'DELETE',
+      endpoint: `/vendors/assignments/${assignmentId}`,
+      payload: {},
+      entityType: 'vendor',
+      entityId: assignmentId,
+      operation: 'DELETE',
+      conflictStrategy: 'server-wins',
+    });
+  },
+
   async create(data: any): Promise<void> {
     await syncQueue.enqueue({
       method: 'POST',

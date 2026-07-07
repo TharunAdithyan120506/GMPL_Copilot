@@ -158,6 +158,14 @@ export async function processJob(initialJob: SyncJob): Promise<void> {
     // Always trigger a refresh in the background to fetch the new real record
     // This is vital for TRANSITION (submit) as well, to pull the new 'submitted' state.
     import('./pull').then(m => m.pullAll(true)).catch(() => {});
+
+    // If this was a CREATE that rewrote dependent jobs, immediately re-drain
+    // so those jobs don't wait up to 60s for the next scheduler tick.
+    // We set _processing = false first so the recursive drain() can run.
+    if (job.operation === 'CREATE') {
+      _processing = false;
+      drain().catch(() => {});
+    }
     
     scheduleCleanup(jobId);
   } catch (err: any) {
