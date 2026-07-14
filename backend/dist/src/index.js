@@ -33,12 +33,12 @@ express_1.default.response.json = function (body) {
 };
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
-// [FIX: SEC-1] Restrict CORS to the configured frontend origin only
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',').map(s => s.trim());
+// [FIX: SEC-1] Restrict CORS to configured origins and local dev network
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim());
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl, Postman during dev)
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Allow requests with no origin, allowedOrigins, or local network IPs (for live network dev)
+        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://192.168.') || origin.startsWith('http://10.') || origin.startsWith('http://172.') || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
             callback(null, true);
         }
         else {

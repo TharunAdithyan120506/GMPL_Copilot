@@ -6,7 +6,11 @@ import { NotificationService } from '../../cross-cutting/notifications/notificat
 
 export const DailyLoggingService = {
   async list(ctx: AuthContext, filter: any = {}) {
-    const where: any = { companyId: ctx.companyId, deletedAt: null };
+    const where: any = {
+      companyId: ctx.companyId,
+      deletedAt: null,
+      status: { in: ['submitted', 'corrected'] },
+    };
     if (ctx.role === 'vendor') where.vendorId = ctx.vendorId;
     if (filter.mouldId) where.mouldId = filter.mouldId;
     if (filter.assignmentId) where.assignmentId = filter.assignmentId;
@@ -38,6 +42,33 @@ export const DailyLoggingService = {
         });
         if (!assignment) throw Errors.notFound('Active assignment');
 
+        const mould = await tx.mould.findFirst({
+          where: { id: assignment.mouldId, companyId: ctx.companyId, deletedAt: null },
+        });
+        if (!mould) throw Errors.notFound('Mould');
+
+        const totalParts = Number(data.acceptedQty || 0) + Number(data.rejectedQty || 0);
+        if (totalParts % Number(mould.cavityCount) !== 0) {
+          throw {
+            code: 'VALIDATION_ERROR',
+            message: `Total parts (${totalParts}) is not perfectly divisible by mould cavity count (${mould.cavityCount}).`,
+            status: 400,
+          };
+        }
+        const calculatedShotsRun = totalParts / Number(mould.cavityCount);
+        const shotWeightG = mould.shotWeightG;
+        const rmConsumedKg = (calculatedShotsRun * Number(shotWeightG)) / 1000;
+        const irrecoverableLossKg = rmConsumedKg * 0.01;
+        const totalDeduction = rmConsumedKg + irrecoverableLossKg;
+
+        if (Number(assignment.rmRemainingQty) < totalDeduction) {
+          throw {
+            code: 'VALIDATION_ERROR',
+            message: `Insufficient raw material. This log would consume ${totalDeduction.toFixed(3)} kg but only ${Number(assignment.rmRemainingQty).toFixed(3)} kg remains in the assignment.`,
+            status: 400,
+          };
+        }
+
         const log = await tx.dailyProductionLog.create({
           data: {
             companyId: ctx.companyId,
@@ -45,20 +76,56 @@ export const DailyLoggingService = {
             assignmentId: assignment.id,
             mouldId: assignment.mouldId,
             logDate: new Date(data.logDate),
-            shotsRun: 0n, // System-computed at submit time, never from client
+            shotsRun: BigInt(calculatedShotsRun),
             acceptedQty: data.acceptedQty,
             rejectedQty: data.rejectedQty,
             dispatchedQty: data.dispatchedQty,
             downtimeReason: data.downtimeReason || null,
             downtimeMinutes: data.downtimeMinutes || null,
-            shotWeightGSnapshot: 0, // Set to 0 in draft, resolved on submit
-            rmConsumedQty: 0,
-            rmIrrecoverableLossQty: 0,
-            status: 'draft',
+            shotWeightGSnapshot: shotWeightG,
+            rmConsumedQty: rmConsumedKg,
+            rmIrrecoverableLossQty: irrecoverableLossKg,
+            status: 'submitted',
             createdBy: ctx.userId,
             updatedBy: ctx.userId,
           },
         });
+
+        await tx.assignment.update({
+          where: { id: assignment.id },
+          data: {
+            rmConsumedQty: { increment: rmConsumedKg },
+            rmIrrecoverableLossQty: { increment: irrecoverableLossKg },
+            rmRemainingQty: { decrement: totalDeduction },
+            updatedBy: ctx.userId,
+          },
+        });
+
+        const updatedMould = await tx.mould.update({
+          where: { id: mould.id },
+          data: {
+            shotCountAccumulated: { increment: calculatedShotsRun },
+            updatedBy: ctx.userId,
+          },
+        });
+
+        if (Number(updatedMould.shotCountAccumulated) >= Number(mould.shotLifeLimit) && mould.lifecycleState === 'active') {
+          await tx.mould.update({ where: { id: mould.id }, data: { lifecycleState: 'flagged_for_replacement', updatedBy: ctx.userId } });
+          await tx.mouldLifecycleEvent.create({
+            data: {
+              companyId: ctx.companyId,
+              mouldId: mould.id,
+              eventType: 'flagged_for_replacement',
+              fromState: 'active',
+              toState: 'flagged_for_replacement',
+              shotCountAtEvent: updatedMould.shotCountAccumulated,
+              triggerKind: 'automatic',
+              createdBy: ctx.userId || '',
+            },
+          });
+          await NotificationService.enqueue(ctx.companyId, 'MOULD_LIFE_WARNING', { mouldId: mould.id, mouldName: mould.name }, tx);
+        }
+
         await AuditService.write({
           companyId: ctx.companyId,
           entityType: 'daily_production_log',
@@ -127,6 +194,7 @@ export const DailyLoggingService = {
       where: { id, companyId: ctx.companyId, vendorId: ctx.vendorId!, deletedAt: null },
     });
     if (!current) throw Errors.notFound('Log');
+    if (current.status === 'submitted' || current.status === 'corrected') return current;
     if (current.status !== 'draft') throw Errors.stateTransition('Only draft logs can be submitted');
 
     return prisma.$transaction(async (tx) => {

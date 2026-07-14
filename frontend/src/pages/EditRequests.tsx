@@ -59,6 +59,19 @@ export function EditRequests() {
 
   return (
     <div className="flex-1 w-full p-4 md:p-6 flex flex-col gap-6 overflow-y-auto">
+      {/* Alert banner — highlighted pending count for company */}
+      {isCompany && pendingCount > 0 && (
+        <div className="bg-warning/20 border-2 border-on-background neo-shadow flex items-center gap-4 px-5 py-4">
+          <span className="material-symbols-outlined text-warning fill-icon text-[28px] shrink-0">pending_actions</span>
+          <div className="flex-1">
+            <p className="font-headline-md font-bold text-on-background">{pendingCount} Edit Request{pendingCount > 1 ? 's' : ''} Awaiting Review</p>
+            <p className="font-body-md text-sm text-on-surface-variant mt-0.5">Vendor corrections need your approval before logs are finalised.</p>
+          </div>
+          <button onClick={() => setFilter('pending')} className="shrink-0 bg-on-background text-surface border-2 border-on-background px-4 py-2 font-label-sm text-label-sm uppercase neo-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+            Review Now
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>

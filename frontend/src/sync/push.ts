@@ -109,8 +109,8 @@ export async function processJob(initialJob: SyncJob): Promise<void> {
       },
     });
 
-    // ✅ Success — mark done and schedule cleanup
-    await db.syncQueue.update(jobId, { status: 'done', error: null });
+    // ✅ Success — delete the completed job immediately to keep counts accurate
+    await db.syncQueue.delete(jobId);
     
     // Offline-First Dependency Resolution:
     // If we just created a record on the server, subsequent queued mutations 
@@ -146,28 +146,40 @@ export async function processJob(initialJob: SyncJob): Promise<void> {
       }
     }
     
-    // Clean up optimistic local record so it is replaced by real server data on next pull
-    // We only need to delete if it's a CREATE. If it's a TRANSITION, we just pull the new state.
+    // Replace optimistic local record with real server response instantly (zero gap)
     if (job.operation === 'CREATE') {
       const table = (db as any)[`${job.entityType}s`];
+      const serverEntity = res.data?.data;
       if (table) {
-        await table.delete(job.entityId).catch(() => {});
+        if (serverEntity && typeof serverEntity === 'object' && serverEntity.id) {
+          if (job.entityType === 'log' && serverEntity.logDate) {
+            const rawDate = serverEntity.logDate;
+            serverEntity.logDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : (rawDate instanceof Date ? rawDate.toISOString().split('T')[0] : String(rawDate || '').split('T')[0]);
+          }
+          await db.transaction('rw', table, async () => {
+            await table.delete(job.entityId).catch(() => {});
+            await table.put({
+              ...serverEntity,
+              _syncedAt: Date.now(),
+              _isOptimistic: false,
+              _syncStatus: 'synced',
+            });
+          });
+        } else {
+          await table.delete(job.entityId).catch(() => {});
+        }
       }
     }
 
-    // Always trigger a refresh in the background to fetch the new real record
-    // This is vital for TRANSITION (submit) as well, to pull the new 'submitted' state.
+    // Always trigger a background pull to fetch the new authoritative server state
     import('./pull').then(m => m.pullAll(true)).catch(() => {});
 
     // If this was a CREATE that rewrote dependent jobs, immediately re-drain
-    // so those jobs don't wait up to 60s for the next scheduler tick.
-    // We set _processing = false first so the recursive drain() can run.
+    // IMPORTANT: reset _processing BEFORE re-draining so it isn't blocked.
     if (job.operation === 'CREATE') {
       _processing = false;
-      drain().catch(() => {});
+      await drain();
     }
-    
-    scheduleCleanup(jobId);
   } catch (err: any) {
     const httpStatus = err?.response?.status;
     const serverMessage =
@@ -206,7 +218,7 @@ export async function processJob(initialJob: SyncJob): Promise<void> {
 export async function pendingPushCount(): Promise<number> {
   const currentUserId = getCurrentUserId();
   return db.syncQueue
-    .where('status').anyOf(['pending', 'in-flight', 'failed'])
+    .where('status').anyOf(['pending', 'in-flight'])
     .filter(job => job.userId === currentUserId)
     .count();
 }
@@ -223,10 +235,3 @@ export async function getFailedJobs(): Promise<SyncJob[]> {
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
-
-/** Auto-delete done jobs after 5 minutes to keep the queue table lean. */
-function scheduleCleanup(jobId: number): void {
-  setTimeout(() => {
-    db.syncQueue.delete(jobId).catch(() => {});
-  }, 5 * 60_000);
-}

@@ -9,6 +9,7 @@
  *   toast.info('Syncing...', { action: { label: 'Undo', onClick: handleUndo } });
  */
 import React, { createContext, useCallback, useContext, useState } from 'react';
+import { playSound } from '../lib/sound';
 
 export interface ToastItem {
   id: string;
@@ -16,6 +17,7 @@ export interface ToastItem {
   variant: 'success' | 'error' | 'warning' | 'info';
   action?: { label: string; onClick: () => void };
   duration?: number;
+  silent?: boolean; // set true to suppress sound (e.g. background sync toasts)
 }
 
 interface ToastContextValue {
@@ -37,6 +39,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const add = useCallback((item: Omit<ToastItem, 'id'>) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setToasts(prev => [...prev.slice(-9), { ...item, id }]); // max 10 in state
+    // Play matching sound unless caller opts out
+    if (!item.silent) {
+      playSound(item.variant === 'success' ? 'success' : item.variant as any);
+    }
   }, []);
 
   const dismiss = useCallback((id: string) => {

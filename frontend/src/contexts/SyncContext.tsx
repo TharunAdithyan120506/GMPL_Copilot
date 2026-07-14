@@ -51,7 +51,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       const [p, f, syncedAt] = await Promise.all([
         syncQueue.pendingCount(),
         syncQueue.failedCount(),
-        getLastSyncedAt('vendors'), // use vendors as a proxy for "last full sync"
+        getLastSyncedAt('logs'), // Use logs as proxy — most relevant for vendors
       ]);
       setPendingCount(p);
       setFailedCount(f);
@@ -77,9 +77,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Derive status from counts + connectivity
+  // Order of priority: failed > uploading/offline > synced
   let status: SyncStatus = 'synced';
   if (failedCount > 0) status = 'error';
   else if (!isOnline || pendingCount > 0) status = 'pending';
+  // Note: pendingCount only includes 'pending' + 'in-flight', NOT 'done' jobs.
 
   return (
     <SyncContext.Provider value={{ status, pendingCount, failedCount, isOnline, lastSyncedAt, forceSync }}>

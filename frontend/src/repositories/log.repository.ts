@@ -14,7 +14,8 @@ import { pullLogs } from '../sync/pull';
 
 export const LogRepository = {
   async getAll(): Promise<CachedLog[]> {
-    return db.logs.orderBy('logDate').reverse().toArray();
+    const all = await db.logs.orderBy('logDate').reverse().toArray();
+    return all.filter(l => l.status !== 'draft');
   },
 
   async getById(id: string): Promise<CachedLog | undefined> {
@@ -23,10 +24,11 @@ export const LogRepository = {
 
   refresh(force = false): void {
     pullLogs(force).catch(() => {});
+    db.logs.where('status').equals('draft').delete().catch(() => {});
   },
 
-  /** Create a draft log — written to local DB optimistically, queued for sync */
-  async createDraft(data: {
+  /** Create a production log — written to local DB optimistically as submitted, queued for sync */
+  async createLog(data: {
     assignmentId: string;
     logDate: string;
     acceptedQty: number;
@@ -56,7 +58,7 @@ export const LogRepository = {
       mouldId: foundMould?.id || 'local',
       assignmentId: data.assignmentId,
       logDate: data.logDate,
-      status: 'draft',
+      status: 'submitted',
       acceptedQty: data.acceptedQty,
       rejectedQty: data.rejectedQty,
       dispatchedQty: data.dispatchedQty,
@@ -82,21 +84,17 @@ export const LogRepository = {
     return tempId;
   },
 
-  /** Submit a draft log */
+  /** Alias for backward compatibility */
+  async createDraft(data: any): Promise<string> {
+    return this.createLog(data);
+  },
+
+  /** Submit a draft log (no-op if already submitted via createLog) */
   async submitLog(logId: string, idempotencyKey: string): Promise<void> {
     const log = await db.logs.get(logId);
-    if (log) {
-      await db.logs.update(logId, { status: 'submitted', _isOptimistic: true });
-    }
+    if (!log || log.status === 'submitted' || log.status === 'corrected') return;
+    await db.logs.update(logId, { status: 'submitted', _isOptimistic: true });
 
-    // NOTE: logId may be a local temp ID (e.g. "local-abc123") if the CREATE
-    // job hasn't synced yet (offline scenario). push.ts handles this automatically:
-    // after the CREATE job succeeds and gets the real server ID, it rewrites all
-    // subsequent queued jobs that share the same entityId, replacing the temp ID
-    // in both the endpoint URL and payload. So we just enqueue with the same entityId.
-    // [FIX: LOG-1] idempotencyKey must be sent as an HTTP header 'Idempotency-Key'
-    // NOT in the request body. The backend reads req.headers['idempotency-key'].
-    // push.ts already spreads job.headers onto each request — so this is the right place.
     await syncQueue.enqueue({
       method: 'POST',
       endpoint: `/logs/${logId}/submit`,

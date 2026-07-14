@@ -150,14 +150,18 @@ export async function pullLogs(force = false): Promise<void> {
       const all = await db.logs.toArray();
       const optimistic = all.filter(l => l._isOptimistic);
       await db.logs.clear();
-      await db.logs.bulkPut(items.map((l: any) => ({
+      const serverItems = items.map((l: any) => ({
         ...l,
+        logDate: typeof l.logDate === 'string' ? l.logDate.split('T')[0] : (l.logDate instanceof Date ? l.logDate.toISOString().split('T')[0] : String(l.logDate || '').split('T')[0]),
         _syncedAt: now,
         _isOptimistic: false,
         _syncStatus: 'synced' as const,
-      })));
-      if (optimistic.length > 0) {
-        await db.logs.bulkPut(optimistic);
+      }));
+      await db.logs.bulkPut(serverItems);
+      const serverKeys = new Set(serverItems.map((l: any) => `${l.assignmentId}_${l.logDate}`));
+      const remainingOptimistic = optimistic.filter(o => !serverKeys.has(`${o.assignmentId}_${o.logDate}`));
+      if (remainingOptimistic.length > 0) {
+        await db.logs.bulkPut(remainingOptimistic);
       }
       await markSynced('logs');
     });

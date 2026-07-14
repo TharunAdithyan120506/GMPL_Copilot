@@ -229,6 +229,7 @@ export function SidebarLayout() {
           <NavLink
             key={item.to + item.label}
             to={item.to}
+            state={item.to === '/logs/new' ? { from: location.pathname, fromLabel: location.pathname === '/' ? 'Home' : location.pathname === '/moulds' ? 'My Moulds' : 'Back' } : undefined}
             end={'end' in item ? item.end : false}
             className={({ isActive }) =>
               `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-colors ${

@@ -224,8 +224,29 @@ export function Moulds() {
 
   const clearVendor = () => setSelectedVendorId('all');
 
+  const nearLimitMoulds = moulds.filter(m => {
+    const pct = m.shotLifeLimit > 0 ? Math.round((m.shotCountAccumulated / m.shotLifeLimit) * 100) : 0;
+    return pct >= 90 || m.lifecycleState === 'flagged_for_replacement';
+  });
+
   return (
     <div className="flex-1 w-full p-margin flex flex-col gap-gutter">
+      {/* Near Life Limit alert banner — company only */}
+      {isCompany && nearLimitMoulds.length > 0 && (
+        <div className="bg-danger/10 border-2 border-danger neo-shadow flex items-center gap-4 px-5 py-4">
+          <span className="material-symbols-outlined text-danger fill-icon text-[28px] shrink-0">timer</span>
+          <div className="flex-1">
+            <p className="font-headline-md font-bold text-danger">{nearLimitMoulds.length} Mould{nearLimitMoulds.length > 1 ? 's' : ''} Near Life Limit</p>
+            <p className="font-body-md text-sm text-on-surface-variant mt-0.5">These moulds have exceeded 90% of their shot life. Schedule replacement or repair immediately.</p>
+          </div>
+          <button
+            onClick={() => setStatusFilter('flagged_for_replacement')}
+            className="shrink-0 bg-danger text-on-error border-2 border-on-background px-4 py-2 font-label-sm text-label-sm uppercase neo-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          >
+            View Now
+          </button>
+        </div>
+      )}
       <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-4 border-b-4 border-on-background border-dashed">
         <div>
           <h2 className="font-display-lg text-display-lg text-on-background leading-none">
@@ -478,7 +499,7 @@ export function Moulds() {
                   <h4 className="font-headline-md text-headline-md mb-3">Vendor Actions</h4>
                   <button
                     disabled={!selectedAssignment || selectedMould.lifecycleState !== 'active'}
-                    onClick={() => selectedAssignment && navigate(`/logs/new?assignmentId=${selectedAssignment.id}`)}
+                    onClick={() => selectedAssignment && navigate(`/logs/new?assignmentId=${selectedAssignment.id}`, { state: { from: '/moulds', fromLabel: 'My Moulds' } })}
                     className="w-full border-2 border-on-background bg-deep-orange text-surface px-4 py-3 font-label-sm text-label-sm uppercase neo-shadow-sm disabled:opacity-50"
                   >
                     Log Production

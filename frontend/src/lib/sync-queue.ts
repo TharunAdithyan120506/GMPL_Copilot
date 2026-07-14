@@ -55,6 +55,15 @@ class SyncQueueManager {
     connectivity.subscribe(online => {
       if (online) this.drain();
     });
+
+    // Auto-notify all subscribers whenever any write/delete hits the syncQueue table directly.
+    // This is critical: push.ts deletes completed jobs directly via db.syncQueue.delete()
+    // and updates in-flight status via db.syncQueue.update() — both bypass this manager.
+    // Dexie hooks ensure the UI (SyncIndicator, OfflineBanner) always sees fresh counts.
+    const notifyFn = () => this._notify();
+    db.syncQueue.hook('creating').subscribe(notifyFn);
+    db.syncQueue.hook('updating').subscribe(notifyFn);
+    db.syncQueue.hook('deleting').subscribe(notifyFn);
   }
 
   // ─── Public API ──────────────────────────────────────────
@@ -79,20 +88,31 @@ class SyncQueueManager {
       createdAt: Date.now(),
       error: null,
     });
-    this._notify();
+    // _notify() is triggered automatically by the Dexie 'creating' hook above
     this.drain();
     return id as number;
   }
 
+  /**
+   * Count of jobs actively waiting to upload:
+   *  - 'pending'   → queued, not yet picked up by the drain loop
+   *  - 'in-flight' → actively uploading right now
+   * Does NOT include 'done', 'failed', or 'conflict'.
+   * Failed jobs are surfaced via failedCount() separately.
+   */
   async pendingCount(): Promise<number> {
     const userId = getCurrentUserId();
     return db.syncQueue
       .where('status')
-      .anyOf(['pending', 'in-flight', 'failed'])
+      .anyOf(['pending', 'in-flight'])
       .filter(job => job.userId === userId)
       .count();
   }
 
+  /**
+   * Count of jobs that have permanently or transiently failed.
+   * These require user attention (retry or dismiss).
+   */
   async failedCount(): Promise<number> {
     const userId = getCurrentUserId();
     return db.syncQueue
@@ -117,13 +137,13 @@ class SyncQueueManager {
       nextRetryAt: Date.now(),
       error: null,
     });
-    this._notify();
+    // _notify() triggered by Dexie 'updating' hook
     this.drain();
   }
 
   async dismiss(jobId: number): Promise<void> {
     await db.syncQueue.delete(jobId);
-    this._notify();
+    // _notify() triggered by Dexie 'deleting' hook
   }
 
   subscribe(fn: QueueListener): () => void {
@@ -137,8 +157,8 @@ class SyncQueueManager {
     // Lazy-import push.ts to avoid circular dependency
     getPushDrain()
       .then(drainFn => drainFn())
-      .then(() => this._notify())
       .catch(() => {});
+    // Note: no explicit _notify() here — push.ts triggers Dexie hooks which auto-notify
   }
 
   // ─── Internal ────────────────────────────────────────────

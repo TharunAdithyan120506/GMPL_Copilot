@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useFormDraft } from '../hooks/useFormDraft';
+import { useState } from 'react';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { MouldRepository } from '../repositories/mould.repository';
 import { LogRepository } from '../repositories/log.repository';
@@ -8,10 +7,23 @@ import { db } from '../lib/db';
 import { SkeletonCard } from '../components/Skeleton';
 import { useToast } from '../hooks/useToast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { playSound } from '../lib/sound';
 
 export function ProductionLogEntry() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnPath = location.state?.from || '/';
+  const returnLabel = location.state?.fromLabel || (returnPath === '/' ? 'Home' : returnPath === '/moulds' ? 'My Moulds' : 'Back');
+  const handleReturn = () => navigate(returnPath);
+  const handleReturnAfterSubmit = () => {
+    if (typeof returnPath === 'string') {
+      navigate(returnPath, { state: { justLogged: true } });
+    } else {
+      navigate(returnPath);
+    }
+  };
+
   const assignmentId = searchParams.get('assignmentId');
 
   const { data: moulds, isFirstLoad } = useLiveQuery<any>(
@@ -32,70 +44,38 @@ export function ProductionLogEntry() {
   const [acceptedQty, setAcceptedQty] = useState<number | ''>('');
   const [rejectedQty, setRejectedQty] = useState<number | ''>('');
   const [dispatchedQty, setDispatchedQty] = useState<number | ''>('');
-
   const [downtime, setDowntime] = useState(false);
   const [downtimeHours, setDowntimeHours] = useState<number | ''>('');
   const [downtimeMins, setDowntimeMins] = useState<number | ''>('');
   const [downtimeReason, setDowntimeReason] = useState('');
 
-  const draftKey = `production-log-${assignmentId ?? 'new'}`;
-  const { draft, savedAt, saveDraft, clearDraft } = useFormDraft<{
-    acceptedQty: number | ''; rejectedQty: number | ''; dispatchedQty: number | '';
-    downtime: boolean; downtimeHours: number | ''; downtimeMins: number | ''; downtimeReason: string;
-  }>(draftKey);
-  const [draftRestored, setDraftRestored] = useState(false);
-
-  useEffect(() => {
-    if (draft && !draftRestored) {
-      setAcceptedQty(draft.acceptedQty);
-      setRejectedQty(draft.rejectedQty);
-      setDispatchedQty(draft.dispatchedQty);
-      setDowntime(draft.downtime);
-      setDowntimeHours(draft.downtimeHours);
-      setDowntimeMins(draft.downtimeMins);
-      setDowntimeReason(draft.downtimeReason);
-      setDraftRestored(true);
-    }
-  }, [draft, draftRestored]);
-
-  useEffect(() => {
-    if (draftRestored) {
-      saveDraft({ acceptedQty, rejectedQty, dispatchedQty, downtime, downtimeHours, downtimeMins, downtimeReason });
-    }
-  }, [acceptedQty, rejectedQty, dispatchedQty, downtime, downtimeHours, downtimeMins, downtimeReason, draftRestored, saveDraft]);
+  const accepted = Number(acceptedQty) || 0;
+  const rejected = Number(rejectedQty) || 0;
+  const total = accepted + rejected;
+  const cavityCount = Number(mould?.cavityCount) || 1;
+  const isValidTotal = total > 0 && total % cavityCount === 0;
 
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignment || !mould) return;
-
-    const accepted = Number(acceptedQty) || 0;
-    const rejected = Number(rejectedQty) || 0;
-
     setError('');
-
-    const totalParts = accepted + rejected;
-    const cavityCount = Number(mould.cavityCount) || 1;
-    if (totalParts === 0) {
+    if (total === 0) {
       const msg = 'Please enter at least one accepted or rejected part.';
       setError(msg);
       toast.warning(msg);
       return;
     }
-    if (totalParts % cavityCount !== 0) {
-      const msg = `Total parts (${totalParts}) must be divisible by cavity count (${cavityCount}).`;
+    if (total % cavityCount !== 0) {
+      const msg = `Total parts (${total}) must be divisible by cavity count (${cavityCount}).`;
       setError(msg);
       toast.warning(msg);
       return;
     }
-
     setConfirmOpen(true);
   };
 
   const executeSubmit = async () => {
     if (!assignment || !mould) return;
-    const accepted = Number(acceptedQty) || 0;
-    const rejected = Number(rejectedQty) || 0;
-
     setSubmitting(true);
     setConfirmOpen(false);
 
@@ -104,7 +84,7 @@ export function ProductionLogEntry() {
       : 0;
 
     try {
-      const draftPayload = {
+      const logPayload = {
         assignmentId: assignment.id,
         mouldId: assignment.mouldId,
         logDate: new Date().toISOString().split('T')[0],
@@ -115,13 +95,11 @@ export function ProductionLogEntry() {
         downtimeReason: downtime ? downtimeReason : undefined,
       };
 
-      const tempId = await LogRepository.createDraft(draftPayload);
-      const idempotencyKey = crypto.randomUUID();
-      await LogRepository.submitLog(tempId, idempotencyKey);
+      await LogRepository.createLog(logPayload);
 
-      await clearDraft();
-      toast.success('Production log submitted and queued for sync!');
-      navigate('/');
+      playSound('submit');
+      toast.success('Production log submitted!', { silent: true }); // sound already played above
+      handleReturnAfterSubmit();
     } catch (err: any) {
       const msg = err.message || 'Failed to submit log. Please try again.';
       setError(msg);
@@ -140,19 +118,13 @@ export function ProductionLogEntry() {
       <div className="p-margin text-center flex flex-col items-center justify-center h-full gap-4">
         <span className="material-symbols-outlined text-[56px] text-warning">warning</span>
         <h2 className="font-headline-lg">No Mould Selected</h2>
-        <p className="text-on-surface-variant">Go back to My Moulds and tap "Log Production".</p>
-        <button onClick={() => navigate('/moulds')} className="mt-4 bg-primary-container text-on-primary-container border-2 border-on-background px-6 py-3 font-label-sm uppercase neo-shadow">
-          Go to My Moulds
+        <p className="text-on-surface-variant">Go back to {returnLabel} and tap "Log Production".</p>
+        <button onClick={handleReturn} className="mt-4 bg-primary-container text-on-primary-container border-2 border-on-background px-6 py-3 font-label-sm uppercase neo-shadow">
+          Go to {returnLabel}
         </button>
       </div>
     );
   }
-
-  const accepted = Number(acceptedQty) || 0;
-  const rejected = Number(rejectedQty) || 0;
-  const total = accepted + rejected;
-  const cavityCount = Number(mould?.cavityCount) || 1;
-  const isValidTotal = total > 0 && total % cavityCount === 0;
 
   return (
     <div className="flex-grow flex justify-center py-6 px-4 md:px-8 overflow-y-auto bg-background">
@@ -160,9 +132,9 @@ export function ProductionLogEntry() {
 
         {/* Page Header */}
         <div className="border-b-2 border-on-background pb-4">
-          <button onClick={() => navigate('/moulds')} className="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm uppercase mb-3 hover:text-on-background transition-colors">
+          <button type="button" onClick={handleReturn} className="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm uppercase mb-3 hover:text-on-background transition-colors">
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-            Back to My Moulds
+            Back to {returnLabel}
           </button>
           <h1 className="font-display-lg text-[28px] font-black leading-tight text-on-background">
             Daily Log Entry
@@ -175,11 +147,6 @@ export function ProductionLogEntry() {
               {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
             </span>
           </div>
-          {savedAt && (
-            <p className="font-label-sm text-[11px] text-secondary uppercase mt-2">
-              ✓ Draft autosaved at {new Date(savedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          )}
         </div>
 
         {/* Error */}
@@ -192,7 +159,7 @@ export function ProductionLogEntry() {
 
         <form className="flex flex-col gap-5" onSubmit={handlePreSubmit}>
 
-          {/* Accepted Qty — BIG tap-friendly input */}
+          {/* Accepted Qty */}
           <div className="bg-surface border-2 border-on-background neo-shadow p-5">
             <label htmlFor="accepted-qty" className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-1">
               Accepted Parts <span className="text-success font-bold">✓ Good</span>
@@ -208,7 +175,7 @@ export function ProductionLogEntry() {
               min="0"
               value={acceptedQty}
               onChange={e => setAcceptedQty(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
-              placeholder="Enter number"
+              placeholder="0"
               className="w-full h-20 bg-surface-container-low border-2 border-on-background text-center text-[40px] font-black text-success focus:outline-none focus:border-success neo-shadow-sm transition-all"
             />
           </div>
@@ -229,7 +196,7 @@ export function ProductionLogEntry() {
               min="0"
               value={rejectedQty}
               onChange={e => setRejectedQty(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
-              placeholder="Enter number"
+              placeholder="0"
               className="w-full h-20 bg-surface-container-low border-2 border-on-background text-center text-[40px] font-black text-danger focus:outline-none focus:border-danger neo-shadow-sm transition-all"
             />
           </div>
@@ -283,7 +250,6 @@ export function ProductionLogEntry() {
                   Did the machine stop or have delays today?
                 </p>
               </div>
-              {/* Large tap-target toggle */}
               <button
                 type="button"
                 role="switch"
@@ -297,7 +263,6 @@ export function ProductionLogEntry() {
 
             {downtime && (
               <div className="mt-5 pt-5 border-t-2 border-on-background flex flex-col gap-4">
-                {/* Reason */}
                 <div>
                   <label className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-2">
                     What caused it?
@@ -327,7 +292,6 @@ export function ProductionLogEntry() {
                   </div>
                 </div>
 
-                {/* Duration: Hours + Minutes */}
                 <div>
                   <label className="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-2">
                     How long was the downtime?
@@ -385,13 +349,13 @@ export function ProductionLogEntry() {
               ) : (
                 <>
                   <span className="material-symbols-outlined text-[20px]">send</span>
-                  Review & Submit Log
+                  Review &amp; Submit Log
                 </>
               )}
             </button>
             <button
               type="button"
-              onClick={() => navigate('/moulds')}
+              onClick={handleReturn}
               disabled={submitting}
               className="w-full h-12 bg-surface border-2 border-on-background text-on-background font-label-sm text-label-sm uppercase neo-shadow-sm hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
